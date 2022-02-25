@@ -4,7 +4,7 @@
     <img src="https://live.staticflickr.com/65535/50785904072_47d762805f_o.png" alt="Logo" width="512" height="97">
   </a>
 
-  <h3 align="center">Simple and Basic Film Emulation shader for ReShade (DirectX 10+ API)</h3>
+  <h3 align="center">Simple and Basic Film Emulation shader for ReShade</h3>
 
   <p align="center">
     <a href="https://github.com/dddfault/NativeEnhancer-FE/issues">Report Bug</a>
@@ -39,13 +39,10 @@ instead of using bunch of shaders.
 A Lookup Table (LUT) is a function for mapping an input color to an output color.
 Using a texture is extremely fast and has low performance impact compared to using
 a multitude of shaders. The LUT textures was created in Photoshop with custom Lightroom
-presets to achieve filmic emulation look which hard to do using SweetFX or other shader.
+presets to achieve filmic look which hard to do using SweetFX or other shader.
 
 This preset only handles the color. You can enable other effects to enhance the
 preset further.
-
-There is 263 analog film LUT available, it is almost double the count from last Version.
-
 
 <!-- GETTING STARTED -->
 ## Getting Started
@@ -67,9 +64,10 @@ ReShade 4.8.x, (Latest version is recommended)
   <p align="center">
     This work is licensed under a MIT License
     <br/>
-    Copyright (c) 2020 dddfault
+    Copyright © 2022 dddfault
   </p>
 
 
 <!-- ACKNOWLEDGEMENTS -->
 ## Acknowledgements
+Thanks to prod80 for the amazing [shaders](https://github.com/prod80/prod80-ReShade-Repository) and many useful functions that he created.

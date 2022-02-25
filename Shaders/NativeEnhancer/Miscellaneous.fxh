@@ -1,7 +1,7 @@
 /*
 		Description : Miscellaneous Helper File for NATIVENHANCER
 		Author      : dddfault
-		License     : MIT, Copyright (c) 2022 dddfault
+		License     : MIT, Copyright © 2022 dddfault
 
 		Additional credits
 		- Color space convertion function by prod80
