@@ -1,325 +1,841 @@
 /*
-	NATIVENHANCER Film Emulation for ReShade
-	Version One
-	by dddfault
-	Copyright (c) 2020 dddfault
+		Description : 'NATIVENHANCER' Film Emulation for Reshade https://reshade.me/
+		Author      : dddfault
+		License     : MIT, Copyright (c) 2022 dddfault
 
-	A simple and basic film emulation using color lookup table
-	combined with various overlay textures to mimic analog film looks.
+		A simple and basic film emulation using color lookup table
+		combined with various overlay textures to mimic analog film looks.
 
-	Additional credits
-	- Based on Otis_Inf's MultiLUT
-	  with further modification by prod80
-	- Additional shader functions by prod80
-	- Fisheye shader by Ice La Glace (ported from a site)
+		Additional credits
+		- prod80 for functions that used on this shader.
+		  (https://github.com/prod80/prod80-ReShade-Repository)
 
-	MIT License
+		MIT License
 
-	Permission is hereby granted, free of charge, to any person obtaining a copy
-	of this software and associated documentation files (the "Software"), to deal
-	in the Software without restriction, including without limitation the rights
-	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-	copies of the Software, and to permit persons to whom the Software is
-	furnished to do so, subject to the following conditions:
+		Permission is hereby granted, free of charge, to any person obtaining a copy
+		of this software and associated documentation files (the "Software"), to deal
+		in the Software without restriction, including without limitation the rights
+		to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+		copies of the Software, and to permit persons to whom the Software is
+		furnished to do so, subject to the following conditions:
 
-	The above copyright notice and this permission notice shall be included in all
-	copies or substantial portions of the Software.
+		The above copyright notice and this permission notice shall be included in all
+		copies or substantial portions of the Software.
 
-	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-	SOFTWARE.
+		THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+		IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+		FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+		AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+		LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+		OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+		SOFTWARE.
 */
 
-// INITIAL SETUP //////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////
 #include "ReShade.fxh"
 #include "dMakro.fxh"
-#include "NativeEnhancer\UserInterface.fxh"
-#include "NativeEnhancer\Miscellaneous.fxh"
-#include "NativeEnhancer\blendingmode.fxh"
-#include "NativeEnhancer\Resources.fxh"
+#include "NativeEnhancer/miscellaneous.fxh"
+#include "NativeEnhancer/blendingmode.fxh"
 
-// PIXEL SHADER ///////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////
-void FilmEmulation(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 color : SV_Target0)
+namespace dft_nefilm
 {
-	float  lerpfact;
-	float2 texelsize;
-	float3 lutcoord, lutcolor;
-	color        = tex2D(ReShade::BackBuffer, texcoord.xy);
-	color.rgb    = pow(abs((color.rgb - BP)/(WP - BP)), GAMMA) * (float3((255-CLIPPING)/255.0f, (255-CLIPPING)/255.0f, (255-CLIPPING)/255.0f) - float3(CLIPPING/255.0f, CLIPPING/255.0f, CLIPPING/255.0f)) + float3(CLIPPING/255.0f, CLIPPING/255.0f, CLIPPING/255.0f);
+		//// PREPROCESSOR DEFINITIONS ////////////////////////////////////////////////
+		// Film softening
+		#ifndef FILMFX_1_SOFTENS
+				#define FILMFX_1_SOFTENS                   0
+		#endif
 
-	texelsize    = rcp(64);
-	texelsize.x /= 64;
-	lutcoord     = float3((color.rg * 64 - color.rg + 0.5) * texelsize.xy, color.b * 64 - color.b);
+		// Enable halation, simulate glowy edges on bright spot.
+		#ifndef FILMFX_2_HALATION
+				#define FILMFX_2_HALATION                   0
+		#endif
 
-	switch(FILM_TYPE_SELECTOR)
-	{
-		case 0:
-			lutcoord.y  /= AGFA_LUT_AMOUNT;
-			lutcoord.y  += (float(AGFA_LUT_SELECTOR) / AGFA_LUT_AMOUNT); break;
-		case 1:
-			lutcoord.y  /= FUJI_LUT_AMOUNT;
-			lutcoord.y  += (float(FUJI_LUT_SELECTOR) / FUJI_LUT_AMOUNT); break;
-		case 2:
-			lutcoord.y  /= KODAK_LUT_AMOUNT;
-			lutcoord.y  += (float(KODAK_LUT_SELECTOR) / KODAK_LUT_AMOUNT); break;
-		case 3:
-			lutcoord.y  /= POLAROID_LUT_AMOUNT;
-			lutcoord.y  += (float(POLAROID_LUT_SELECTOR) / POLAROID_LUT_AMOUNT); break;
-		case 4:
-			lutcoord.y  /= ILFORD_LUT_AMOUNT;
-			lutcoord.y  += (float(ILFORD_LUT_SELECTOR) / ILFORD_LUT_AMOUNT); break;
-	}
+		// Simulate hazy foggy light on screen by diffusing lights.
+		#ifndef FILMFX_3_DIFFUSION
+				#define FILMFX_3_DIFFUSION             0
+		#endif
 
-	lerpfact     = frac(lutcoord.z);
-	lutcoord.x  += (lutcoord.z - lerpfact) * texelsize.y;
+		// Multi layered Lens Diffusion
+		#ifndef FILMFX_3_HQ_DIFFUSION
+				#define FILMFX_3_HQ_DIFFUSION          0
+		#endif
 
-	switch(FILM_TYPE_SELECTOR)
-	{
-		case 0:
-			lutcolor   = lerp(tex2D(NE_AGFA_FILM, lutcoord.xy).rgb, tex2D(NE_AGFA_FILM, float2(lutcoord.x + texelsize.y, lutcoord.y)).rgb, lerpfact); break;
-		case 1:
-			lutcolor   = lerp(tex2D(NE_FUJI_FILM, lutcoord.xy).rgb, tex2D(NE_FUJI_FILM, float2(lutcoord.x + texelsize.y, lutcoord.y)).rgb, lerpfact); break;
-		case 2:
-			lutcolor   = lerp(tex2D(NE_KODAK_FILM, lutcoord.xy).rgb, tex2D(NE_KODAK_FILM, float2(lutcoord.x + texelsize.y, lutcoord.y)).rgb, lerpfact); break;
-		case 3:
-			lutcolor   = lerp(tex2D(NE_POLAROID_FILM, lutcoord.xy).rgb, tex2D(NE_POLAROID_FILM, float2(lutcoord.x + texelsize.y, lutcoord.y)).rgb, lerpfact); break;
-		case 4:
-			lutcolor   = lerp(tex2D(NE_ILFORD_FILM, lutcoord.xy).rgb, tex2D(NE_ILFORD_FILM, float2(lutcoord.x + texelsize.y, lutcoord.y)).rgb, lerpfact); break;
-	}
+		// Simulate film jittery-inconsistent of exposure and color effect.
+		#ifndef FILMFX_4_BREATH
+				#define FILMFX_4_BREATH                     0
+		#endif
 
-	float3 lablut    = pd80_srgb_to_lab(lutcolor.rgb);
-	float3 labcol    = pd80_srgb_to_lab(color.rgb);
-	float newluma    = lerp(labcol.r, lablut.r, LUT_LUMA_MIX);
-	float2 newAB     = lerp(labcol.gb, lablut.gb, LUT_CHROMA_MIX);
-	lutcolor.rgb     = pd80_lab_to_srgb(float3(newluma, newAB));
-	color.rgb        = lerp(color.rgb, saturate(lutcolor.rgb), LUT_INTENSITY);
+		// Simulate film frame jitter.
+		#ifndef FILMFX_5_GATE_WEAVE
+				#define FILMFX_5_GATE_WEAVE                 0
+		#endif
 
-	// Post LUT Grading
-	color.rgb   		 = exp2(EXPOSURE * saturate(color.rgb)) * color.rgb;
-  color.rgb       *= BRIGHTNESS;
-	color.rgb	       = 0.5 + (saturate(color.rgb) - 0.5) * CONTRAST;
-  color.rgb        = saturation(saturate(color.rgb), SATURATION);
-	color.a          = 1.0;
-}
+		//// USER INTERFACE PARAMETERS /////////////////////////////////////////////
+		uniform int _welcome <
+				ui_text            = "This is a welcome message test";
+				ui_label           = " ";
+				ui_category        = "welcome";
+				ui_category_closed = true;
+				ui_type            = "radio";
+				>;
 
-/*
-void FilmLeaks(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 color : SV_Target0)
-{
-	float2 lcoord, pcoord;
-	float4  leaks, prism;
-	color = tex2D(ReShade::BackBuffer, texcoord.xy);
+		uniform uint kelvinTemp <
+				ui_label    = "Color Temperature (K)";
+				ui_tooltip  = "Color temperature in Kelvin value.\n\n"
+				              "Lower value  = Warmer color tone\n"
+				              "Higher value = Colder color tone";
+				ui_category = "Pre-Color Correction";
+				ui_type     = "drag";
+				ui_min      = 1000;
+				ui_max      = 40000;
+				> = 6500;
 
-	if (USE_LIGHT_LEAK == true)
-	{
-		switch(LIGHT_LEAK_VARIATION)
+		uniform float lumaPresevation <
+				ui_label    = "Luminance Preservation";
+				ui_category = "Pre-Color Correction";
+				ui_type     = "drag";
+				ui_min      = 0.0;
+				ui_max      = 1.0;
+				ui_step     = 0.01;
+				> = 1.0;
+
+		uniform float kelvinMix <
+				ui_label    = "Color Temperature Mix";
+				ui_tooltip  = "Mixture or blending intensity with Original color.\n\n"
+				              "Lower value  = Original color tone\n"
+				              "Higher value = Full color temperature tone blend";
+				ui_category = "Pre-Color Correction";
+				ui_type     = "drag";
+				ui_min      = 0.0;
+				ui_max      = 1.0;
+				ui_step     = 0.01;
+				> = 1.0;
+
+		uniform float filmSatLimit <
+				ui_label    = "Color Saturation Limit";
+				ui_tooltip  = "Limit overall color saturation to prevent over-saturation.\n\n"
+				              "Lower value  = Limited saturation (Zero goes black n White)\n"
+				              "Higher value = Original color";
+				ui_category = "Pre-Color Correction";
+				ui_type     = "drag";
+				ui_min      = 0.0;
+				ui_max      = 1.0;
+				ui_step     = 0.01;
+				> = 1.0;
+
+		uniform float filmExposure <
+				ui_label    = "Exposure / Highlight Adjustment";
+				ui_tooltip  = "Adjustment control for exposure or highlight color tone.\n\n"
+				              "Lower value  = Squashed highlight tone\n"
+				              "Higher value = Boosted highlight tone";
+				ui_category = "Pre-Color Correction";
+				ui_type     = "drag";
+				ui_min      = -2.0;
+				ui_max      = 2.0;
+				ui_step     = 0.001;
+				> = 0.0;
+
+		uniform float filmGamma <
+				ui_label    = "Gamma / Midtone Adjustment";
+				ui_tooltip  = "Adjustment control for midtone (between highlight and shadow).\n\n"
+				              "Lower value  = Darker midtone color\n"
+				              "Higher value = Brighter midtone color";
+				ui_category = "Pre-Color Correction";
+				ui_type     = "drag";
+				ui_min      = 0.0;
+				ui_max      = 2.0;
+				ui_step     = 0.001;
+				> = 1.0;
+
+		uniform float filmContrast <
+				ui_label    = "Contrast / Shadow Adjustment";
+				ui_tooltip  = "Adjustment control for contrast or shadow color tone.\n\n"
+				              "Lower value  = Darker shadow color tone\n"
+				              "Higher value = Brighter shadow color tone";
+				ui_category = "Pre-Color Correction";
+				ui_type     = "drag";
+				ui_min      = 0.33;
+				ui_max      = 3.0;
+				ui_step     = 0.001;
+				> = 1.0;
+
+		uniform float filmBrightness <
+				ui_label    = "Brightness Adjustment";
+				ui_tooltip  = "Adjustment control for overall screen / color brightness.\n\n"
+				              "Lower value  = Less brightness / more darker tone\n"
+				              "Higher value = More brighter overall color tone";
+				ui_category = "Pre-Color Correction";
+				ui_type     = "drag";
+				ui_min      = 0.0;
+				ui_max      = 2.0;
+				ui_step     = 0.001;
+				> = 1.0;
+
+		uniform float filmSaturation <
+				ui_label    = "Color Saturation Adjustment";
+				ui_tooltip  = "Adjustment control for overall color saturation.\n\n"
+				              "Lower value  = Desaturated color tone (Zero goes black n White)\n"
+				              "Higher value = More Saturation on the color tone";
+				ui_category = "Pre-Color Correction";
+				ui_type     = "drag";
+				ui_min      = 0.0;
+				ui_max      = 2.0;
+				ui_step     = 0.001;
+				> = 1.0;
+
+		uniform float3 inBlack <
+				ui_label    = "LUT Black In Level";
+				ui_category = "Color Lookup Table";
+				ui_type     = "color";
+				> = float3(0.0, 0.0, 0.0);
+
+		uniform float3 inWhite <
+				ui_label    = "LUT White In Level";
+				ui_category = "Color Lookup Table";
+				ui_type     = "color";
+				> = float3(1.0, 1.0, 1.0);
+
+		uniform float3 outBlack <
+				ui_label    = "LUT Black Out Level";
+				ui_category = "Color Lookup Table";
+				ui_type     = "color";
+				> = float3(0.0, 0.0, 0.0);
+
+		uniform float3 outWhite <
+				ui_label    = "LUT White Out Level";
+				ui_category = "Color Lookup Table";
+				ui_type     = "color";
+				> = float3(1.0, 1.0, 1.0);
+
+		uniform float inGamma <
+				ui_label    = "LUT Gamma / Midtone Level";
+				ui_category = "Color Lookup Table";
+				ui_type     = "drag";
+				ui_min      = 0.5;
+				ui_max      = 10.0;
+				ui_step     = 0.001;
+				> = 1.0;
+
+		uniform float filmLUTMixLuma <
+				ui_label    = "LUT Luminance Blending";
+				ui_category = "Color Lookup Table";
+				ui_type     = "drag";
+				ui_min      = 0.0;
+				ui_max      = 1.0;
+				ui_step     = 0.001;
+				> = 1.0;
+
+		uniform float filmLUTMixChroma <
+				ui_label    = "LUT Chromatic Blending";
+				ui_category = "Color Lookup Table";
+				ui_type     = "drag";
+				ui_min      = 0.0;
+				ui_max      = 1.0;
+				ui_step     = 0.001;
+				> = 1.0;
+
+		uniform float filmLUTIntensity <
+				ui_label    = "LUT Overall Intensity";
+				ui_category = "Color Lookup Table";
+				ui_type     = "drag";
+				ui_min      = 0.0;
+				ui_max      = 1.0;
+				ui_step     = 0.001;
+				> = 1.0;
+
+		uniform int filmLUTSelector <
+				ui_label    = "LUT Selection";
+				ui_category = "Color Lookup Table";
+				ui_type     = "combo";
+				ui_items    = "Agfa Optima 100II\0"
+				              "Agfa Portrait XPS 160\0"
+				              "Agfa RSX50II\0"
+				              "Agfa RSX200II\0"
+				              "Agfa Scala 200\0"
+				              "Agfa Ultra 50\0"
+				              "Agfa Ultra 100\0"
+				              "Agfa Vista 400 NT\0"
+				              "Agfa Vista 800 NT\0"
+				              "Fuji 160C\0"
+				              "Fuji 160S\0"
+				              "Fuji 400H\0"
+				              "Fuji 800Z\0"
+				              "Fuji Astia 100F\0"
+				              "Fuji Fortia SP\0"
+				              "Fuji Neopan 400 NT\0"
+				              "Fuji Neopan 1600\0"
+				              "Fuji Provia 100F\0"
+				              "Fuji Provia 400X\0"
+				              "Fuji Sensia 100\0"
+				              "Fuji Superia 100\0"
+				              "Fuji Superia 400\0"
+				              "Fuji t64\0"
+				              "Fuji Velvia 50\0"
+				              "Fuji Velvia 100\0"
+				              "Ilford Delta 3200\0"
+				              "Ilford HP5\0"
+				              "Ilford Pan F Plas 50\0"
+				              "Kodak BW400CN NT\0"
+				              "Kodak E100G\0"
+				              "Kodak E100VS\0"
+				              "Kodak E200\0"
+				              "Kodak Ektachrome 64\0"
+				              "Kodak Ektar 25\0"
+				              "Kodak Elite 50II\0"
+				              "Kodak Elite Chrome 160t\0"
+				              "Kodak Max 800 NT\0"
+				              "Kodak Plus-X 125\0"
+				              "Kodak Portra 100t\0"
+				              "Kodak Portra 160\0"
+				              "Kodak Portra 400\0"
+				              "Kodak Portra 800\0"
+				              "Kodak Royal Gold 400 NT\0"
+				              "Kodak T-Max 3200\0"
+				              "Kodak Tri-X 320\0"
+				              "Kodak UltraMax 400 NT\0"
+				              "Kodak UltraMax 800 NT\0"
+				              "Polaroid PX-70\0"
+				              "Polaroid PX-70 Cold\0"
+				              "Polaroid PX-70 Warm\0"
+				              "Polaroid PX-100UV Cold\0"
+				              "Polaroid PX-100UV Warm\0"
+				              "Polaroid PX-680\0"
+				              "Polaroid PX-680 Cold\0"
+				              "Polaroid PX-680 Warm\0"
+				              "Time-Zero Polaroid\0";
+				ui_min      = 0;
+				ui_max      = 56;
+				> = 2;
+
+		#if(FILMFX_1_SOFTENS)
+		uniform float filmSoftnessBlurWidth <
+				ui_label    = "Film Softness Blur Width";
+				ui_category = "Film FX : Softness";
+				ui_type     = "drag";
+				ui_min      = 1.0;
+				ui_max      = 64.0;
+				ui_step     = 0.01;
+				> = 3.0;
+		#endif
+
+		#if(FILMFX_2_HALATION)
+		uniform float halationThreshold <
+				ui_label    = "Halation threshold adjustment (Gamma)";
+				ui_tooltip  = "Limit brightness.\n\n"
+				              "Lower value  = Full screen effect\n"
+				              "Higher value = Limited bright area";
+				ui_category = "Film FX : Halation";
+				ui_type     = "drag";
+				ui_min      = 0.0;
+				ui_max      = 1.0;
+				ui_step     = 0.001;
+				> = 0.722;
+
+		uniform float halationExp <
+				ui_label    = "Halation Exposure";
+				ui_tooltip  = "Boost highlight tone.\n\n"
+				              "Lower value  = Squashed highlight tone\n"
+				              "Higher value = Boosted highlight tone";
+				ui_category = "Film FX : Halation";
+				ui_type     = "drag";
+				ui_min      = -2.0;
+				ui_max      = 5.0;
+				ui_step     = 0.001;
+				> = 1.0;
+
+		uniform float halationBlurWidth <
+				ui_label    = "Halation Blur Width";
+				ui_tooltip  = "Halation blur width adjustment.\n\n"
+				              "Lower value  = Narrow blur effect\n"
+				              "Higher value = Wider blur effect";
+				ui_category = "Film FX : Halation";
+				ui_type     = "drag";
+				ui_min      = 1.0;
+				ui_max      = 5.0;
+				ui_step     = 0.01;
+				> = 2.0;
+
+		uniform int halationBlendMode <
+				ui_label    = "Halation blend mode";
+				ui_category = "Film FX : Halation";
+				ui_type     = "combo";
+				ui_items    = "Default\0"
+				              "Darken\0"
+				              "Multiply\0"
+				              "Color Burn\0"
+				              "Linear Dodge\0"
+				              "Linear Burn\0"
+				              "Lighten\0"
+				              "Screen\0"
+				              "Color Dodge\0"
+				              "Add\0"
+				              "Overlay\0"
+				              "Softlight\0"
+				              "Vividlight\0"
+				              "Linearlight\0"
+				              "Pinlight\0"
+				              "Hardmix\0"
+				              "Difference\0"
+				              "Exclusion\0"
+				              "Subtract\0"
+				              "Reflect\0"
+				              "Hue\0"
+				              "Saturation\0"
+				              "Color\0"
+				              "Luminosity\0";
+				ui_min      = 0;
+				ui_max      = 24;
+				> = 6;
+
+		uniform float halationOpacity <
+				ui_label    = "Halation Opacity";
+				ui_category = "Film FX : Halation";
+				ui_type     = "drag";
+				ui_min      = 0.0;
+				ui_max      = 1.0;
+				ui_step     = 0.01;
+				> = 1.0;
+
+		uniform float3 halationTint <
+				ui_label    = "Halation color tint";
+				ui_category = "Film FX : Halation";
+				ui_type     = "color";
+				> = float3( 0.946, 0.105, 0.105 );
+		#endif
+
+		#if(FILMFX_3_DIFFUSION)
+		uniform float diffusionBlurWidth <
+				ui_label    = "Diffusion Blur Width";
+				ui_tooltip  = "Diffusion blur width adjustment.\n\n"
+											"Lower value  = Narrow blur effect\n"
+											"Higher value = Wider blur effect";
+				ui_category = "Film FX : Diffusion";
+				ui_type     = "drag";
+				ui_min      = 2.0;
+				ui_max      = 32.0;
+				ui_step     = 0.01;
+				> = 4.0;
+
+		#if(FILMFX_3_HQ_DIFFUSION)
+		uniform float diffusionBlurWidthHQ <
+				ui_label    = "Diffusion Blur Width - HQ";
+				ui_tooltip  = "HQ Diffusion blur width adjustment.\n\n"
+											"Lower value  = Narrow blur effect\n"
+											"Higher value = Wider blur effect";
+				ui_category = "Film FX : Diffusion";
+				ui_type     = "drag";
+				ui_min      = 2.0;
+				ui_max      = 32.0;
+				ui_step     = 0.01;
+				> = 8.0;
+		#endif
+
+		uniform int diffusionBlendMode <
+				ui_label    = "Diffusion blend mode";
+				ui_category = "Film FX : Diffusion";
+				ui_type     = "combo";
+				ui_items    = "Default\0"
+											"Darken\0"
+											"Multiply\0"
+											"Color Burn\0"
+											"Linear Dodge\0"
+											"Linear Burn\0"
+											"Lighten\0"
+											"Screen\0"
+											"Color Dodge\0"
+											"Add\0"
+											"Overlay\0"
+											"Softlight\0"
+											"Vividlight\0"
+											"Linearlight\0"
+											"Pinlight\0"
+											"Hardmix\0"
+											"Difference\0"
+											"Exclusion\0"
+											"Subtract\0"
+											"Reflect\0"
+											"Hue\0"
+											"Saturation\0"
+											"Color\0"
+											"Luminosity\0";
+				ui_min      = 0;
+				ui_max      = 24;
+				> = 6;
+
+		uniform float diffusionOpacity <
+				ui_label    = "Diffusion Opacity";
+				ui_category = "Film FX : Diffusion";
+				ui_type     = "drag";
+				ui_min      = 0.0;
+				ui_max      = 1.0;
+				ui_step     = 0.01;
+				> = 0.8;
+		#endif
+
+		#if(FILMFX_4_BREATH)
+		uniform float filmBreathFramerate <
+				ui_label    = "Breath Framerate";
+				ui_tooltip  = "Matching breathing animation to specific framerate.\n\n"
+				              "Zero means using current frame rate.";
+				ui_category = "FilmFX : Breath";
+				ui_type     = "drag";
+				ui_min      = 0;
+				ui_max      = 90;
+				ui_step     = 1;
+				> = 24;
+
+		uniform float2 filmBreathBrightness <
+				ui_label    = "Breath Brightness";
+				ui_tooltip  = "Minimum and maximum value of overall brightness breath.\n\n"
+				              "Left (X) - Minimum value\n"
+											"Right (Y) - Maximum value";
+				ui_category = "FilmFX : Breath";
+				ui_type     = "drag";
+				ui_min      = 0.0;
+				ui_max      = 1.5;
+				ui_step     = 0.001;
+				> = float2(0.985, 1.000);
+
+		uniform float2 filmBreathMidtone <
+				ui_label    = "Breath Midtone";
+				ui_tooltip  = "Minimun and maximum value of midtone breath.\n\n"
+											"Left (X) - Minimum value\n"
+											"Right (Y) - Maximum value";
+				ui_category = "FilmFX : Breath";
+				ui_type     = "drag";
+				ui_min      = 0.0;
+				ui_max      = 1.5;
+				ui_step     = 0.001;
+				> = float2(0.985, 1.000);
+
+		uniform float2 filmBreathSaturation <
+				ui_label    = "Breath Saturation";
+				ui_tooltip  = "Minimun and maximum value of saturation breath.\n\n"
+											"Left (X) - Minimum value\n"
+											"Right (Y) - Maximum value";
+				ui_category = "FilmFX : Breath";
+				ui_type     = "drag";
+				ui_min      = 0.0;
+				ui_max      = 1.5;
+				ui_step     = 0.001;
+				> = float2(0.920, 1.010);
+		#endif
+
+		#if(FILMFX_5_GATE_WEAVE)
+		uniform float filmGateWeaveFramerate <
+				ui_label    = "Gate Weave Framerate";
+				ui_tooltip  = "Matching weave animation to specific framerate.\n\n"
+				              "Zero means using current frame rate.";
+				ui_category = "FilmFX : Gate Weave";
+				ui_type     = "drag";
+				ui_min      = 0;
+				ui_max      = 90;
+				ui_step     = 1;
+				> = 24;
+
+		uniform float2 filmGateWeaveOffset <
+				ui_label    = "Gate Weave Offsets";
+				ui_tooltip  = "Screen coordinate offset value.";
+				ui_category = "FilmFX : Gate Weave";
+				ui_type     = "drag";
+				ui_min      = 0.0;
+				ui_max      = 1.0;
+				ui_step     = 0.001;
+				> = float2(0.000, 0.080);
+		#endif
+
+		//// DEFINES ///////////////////////////////////////////////////////////////
+		uniform float timer < source = "timer"; >;
+		uniform float framecount < source = "framecount"; >;
+
+		//// TEXTURES //////////////////////////////////////////////////////////////
+		texture texHalationA {Width = BUFFER_WIDTH; Height = BUFFER_HEIGHT;};
+		texture texHalationB {Width = BUFFER_WIDTH; Height = BUFFER_HEIGHT;};
+		texture texDiffusionA {Width = BUFFER_WIDTH; Height = BUFFER_HEIGHT;};
+		texture texDiffusionB {Width = BUFFER_WIDTH; Height = BUFFER_HEIGHT;};
+
+		texture neFilmTexture < source = "neFilmLUT.png"; >
+    {
+      Width  = 64 * 64;
+    	Height = 64 * filmLUTAmount;
+    };
+
+		//// SAMPLERS //////////////////////////////////////////////////////////////
+		sampler	filmSampler {Texture = neFilmTexture;};
+		sampler	halationBufferA {Texture = texHalationA;};
+		sampler	halationBufferB {Texture = texHalationB;};
+		sampler	diffusionBufferA {Texture = texDiffusionA;};
+		sampler	diffusionBufferB {Texture = texDiffusionB;};
+
+		//// PIXEL SHADERS /////////////////////////////////////////////////////////
+		void PS_PreCorrection(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 color : SV_Target0)
 		{
-			case 0:
-				lcoord.xy = normalCoord(texcoord.xy); break;
-			case 1:
-				lcoord.xy = flippedCoord(texcoord.xy); break;
+				float3 kColor, oLum, blended, resHSV, resRGB;
+
+				#if(FILMFX_1_SOFTENS)
+				color        = FastBoxBlur(color, texcoord.xy, ReShade::BackBuffer, filmSoftnessBlurWidth/10);
+		    #else
+				color        = tex2D(ReShade::BackBuffer, texcoord.xy);
+				#endif
+
+				// Color temperature by prod80
+				kColor       = KelvinToRGB(kelvinTemp);
+				oLum         = RGBToHSL(color.rgb);
+				blended      = lerp(color.rgb, color.rgb * kColor.rgb, kelvinMix);
+				resHSV       = RGBToHSL(blended.rgb); //TODO: add saturation limiter after this line
+				resRGB       = HSLToRGB(float3(resHSV.xy, oLum.z));
+				color.rgb    = lerp(blended.rgb, resRGB.rgb, lumaPresevation);
+
+				// Color saturation limiter by prod80
+				color.rgb    = RGBToHSL(color.rgb);
+				color.g      = min(color.g, filmSatLimit); //TODO: possible to combine this function on color temperature ?
+				color.rgb    = HSLToRGB(color.rgb);
+
+				// Pre Color Correction
+				color.rgb    = exp2(filmExposure * saturate(color.rgb)) * color.rgb;
+				color.rgb   *= filmBrightness;
+				color.rgb    = pow(abs(color.rgb), 1.0 / filmGamma);
+				color.rgb	   = 0.5 + (saturate(color.rgb) - 0.5) * filmContrast;
+				color.rgb    = saturation(saturate(color.rgb), filmSaturation);
+				color.a      = 1.0f;
 		}
 
-		lcoord.xy = rotateUV2(lcoord.xy, LIGHT_LEAK_ROTATION);
-
-		switch(LIGHT_LEAK_TYPE)
+		void PS_FilmEmulation(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 color : SV_Target0)
 		{
-			case 0:
-				leaks = tex2D(NE_LEAKS_A, lcoord.xy); break;
-			case 1:
-				leaks = tex2D(NE_LEAKS_B, lcoord.xy); break;
-			case 2:
-				leaks = tex2D(NE_LEAKS_C, lcoord.xy); break;
-			case 3:
-				leaks = tex2D(NE_LEAKS_D, lcoord.xy); break;
-			case 4:
-				leaks = tex2D(NE_LEAKS_E, lcoord.xy); break;
+				float  lerpfact, newluma;
+				float2 texelsize, newAB;
+				float3 lutcoord, lutcolor, lablut, labcol;
+				color        = tex2D(ReShade::BackBuffer, texcoord.xy);
+
+				texelsize    = rcp(64);
+				texelsize.x /= 64;
+
+				lutcoord     = float3((color.rg * 64 - color.rg + 0.5) * texelsize.xy, color.b * 64 - color.b);
+				lutcoord.y  /= filmLUTAmount;
+				lutcoord.y  += (float(filmLUTSelector) / filmLUTAmount);
+
+				lerpfact     = frac(lutcoord.z);
+				lutcoord.x  += (lutcoord.z - lerpfact) * texelsize.y;
+				lutcolor     = lerp(tex2D(filmSampler, lutcoord.xy).rgb, tex2D(filmSampler, float2(lutcoord.x + texelsize.y, lutcoord.y)).rgb, lerpfact);
+
+				lutcolor.rgb = levels(lutcolor.rgb, saturate(inBlack.rgb), saturate(inWhite.rgb),
+                                            inGamma,
+                                            saturate(outBlack.rgb), saturate(outWhite.rgb));
+
+				lablut       = pd80_srgb_to_lab(lutcolor.rgb);
+				labcol       = pd80_srgb_to_lab(color.rgb);
+				newluma      = lerp(labcol.x, lablut.x, filmLUTMixLuma);
+				newAB        = lerp(labcol.yz, lablut.yz, filmLUTMixChroma);
+				lutcolor.rgb = pd80_lab_to_srgb(float3(newluma, newAB));
+				color.rgb    = lerp(color.rgb, saturate(lutcolor.rgb), filmLUTIntensity);
+				color.a      = 1.0;
 		}
 
-		leaks.rgb = hueslider(leaks.rgb, LIGHT_LEAK_HUE);
-		leaks.rgb = saturation(leaks.rgb, LIGHT_LEAK_SATURATE);
-		color = blendingmode(leaks, color, LIGHT_LEAK_BLENDMODE, LIGHT_LEAK_OPACITY);
-	}
-
-	color.a      = 1.0;
-}
-*/
-
-void FilmFrame(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 color : SV_Target0)
-{
-	float2 dcoord, fcoord;
-	float4 dirt, frame;
-	color = tex2D(ReShade::BackBuffer, texcoord.xy);
-
-	if (aspekRasio == wideRasio)
-	{
-		fcoord.xy = texcoord.xy;
-	} else {
-		fcoord.xy = fitTex(texcoord.xy);
-	}
-
-	if (USE_DIRT == true)
-	{
-		switch(DIRT_VARIATION)
+		void PS_colorStore(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 halation : SV_Target0, out float4 diffusion : SV_Target1)
 		{
-			case 0:
-				dcoord.xy = normalCoord(texcoord.xy); break;
-			case 1:
-				dcoord.xy = flippedCoord(texcoord.xy); break;
-		}
-			dcoord.xy = rotateUV2(dcoord.xy, DIRT_ROTATION);
-
-		switch(DIRT_TYPE)
-		{
-			case 0:
-				dirt = 1-tex2D(NE_DIRT_A, dcoord.xy).r; break;
-			case 1:
-				dirt = 1-tex2D(NE_DIRT_A, dcoord.xy).g; break;
-			case 2:
-				dirt = 1-tex2D(NE_DIRT_A, dcoord.xy).b; break;
-			case 3:
-				dirt = 1-tex2D(NE_DIRT_B, dcoord.xy).r; break;
-			case 4:
-				dirt = 1-tex2D(NE_DIRT_B, dcoord.xy).g; break;
-			case 5:
-				dirt = 1-tex2D(NE_DIRT_B, dcoord.xy).b; break;
-			case 6:
-				dirt = tex2D(NE_DIRT_C, dcoord.xy).r; break;
-			case 7:
-				dirt = tex2D(NE_DIRT_C, dcoord.xy).g; break;
-			case 8:
-				dirt = tex2D(NE_DIRT_C, dcoord.xy).b; break;
+				halation  = tex2D(ReShade::BackBuffer, texcoord.xy);
+				diffusion = tex2D(ReShade::BackBuffer, texcoord.xy);
 		}
 
-		//color = alphaBlend(color, opacityValue(dirt, DIRT_OPACITY));
-		color = blendingmode(fillValue(dirt, DIRT_CURVE), color, DIRT_BLENDMODE, DIRT_OPACITY);
-	}
-
-	if (USE_FRAME == 1)
-	{
-		switch(POLAROID_TYPE)
+		#if(FILMFX_2_HALATION)
+		void PS_FilmFX_Halation1(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 color : SV_Target0)
 		{
-			case 0:
-				frame = tex2D(NE_POLAROID_A, fcoord.xy);
-			break;
-			case 1:
-				frame = tex2D(NE_POLAROID_B, fcoord.xy);
-			break;
-			case 2:
-				frame = tex2D(NE_POLAROID_C, fcoord.xy);
-			break;
-			case 3:
-				frame = tex2D(NE_POLAROID_D, fcoord.xy);
-			break;
-			case 4:
-				frame = tex2D(NE_POLAROID_E, fcoord.xy);
-			break;
-			case 5:
-				frame = tex2D(NE_POLAROID_F, fcoord.xy);
-			break;
+				float4 halation;
+				halation     = tex2D(halationBufferA, texcoord.xy);
+				halation.rgb = levels(halation.rgb, saturate(halationThreshold), saturate(1.0), 1.0, saturate(0.0), saturate(1.0));
+				halation.rgb = dot(halation.rgb, lumaCoeff);
+				halation.rgb = exp2(halationExp * saturate(halation.rgb)) * halation.rgb;
+				color.rgb    = halation.rgb;
+				color.a      = 1.0f;
 		}
-	}
-	else if (USE_FRAME == 2)
-	{
-		switch(FRAME_TYPE)
+
+		void PS_FilmFX_Halation2(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 color : SV_Target0)
 		{
-			case 0:
-				frame = tex2D(NE_FRAME_A, fcoord.xy);
-			break;
-			case 1:
-				frame = tex2D(NE_FRAME_B, fcoord.xy);
-			break;
-			case 2:
-				frame = tex2D(NE_FRAME_C, fcoord.xy);
-			break;
-			case 3:
-				frame = tex2D(NE_FRAME_D, fcoord.xy);
-			break;
-			case 4:
-				frame = tex2D(NE_FRAME_E, fcoord.xy);
-			break;
-			case 5:
-				frame = tex2D(NE_FRAME_F, fcoord.xy);
-			break;
-			case 6:
-				frame = tex2D(NE_FRAME_G, fcoord.xy);
-			break;
-			case 7:
-				frame = tex2D(NE_FRAME_H, fcoord.xy);
-			break;
-			case 8:
-				frame = tex2D(NE_FRAME_I, fcoord.xy);
-			break;
-			case 9:
-				frame = tex2D(NE_FRAME_J, fcoord.xy);
-			break;
-			case 10:
-				frame = tex2D(NE_FRAME_K, fcoord.xy);
-			break;
-			case 11:
-				frame = tex2D(NE_FRAME_L, fcoord.xy);
-			break;
-			case 12:
-				frame = tex2D(NE_FRAME_M, fcoord.xy);
-			break;
+				float4 halation;
+				halation     = GaussBlur22(texcoord.xy, halationBufferB, halationBlurWidth, 0, 0);
+				color.rgb    = halation.rgb;
+				color.a      = 1.0f;
 		}
-	}
 
-	color = alphaBlend(color, frame);
-	color.a = 1.0;
-}
+		void PS_FilmFX_Halation3(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 color : SV_Target0)
+		{
+				float4 halation;
+				color        = tex2D(ReShade::BackBuffer, texcoord.xy);
+			  halation     = GaussBlur22(texcoord.xy, halationBufferA, halationBlurWidth, 0, 1);
+		    halation.rgb *= halationTint;
+				color.rgb    = blendingmode(halation.rgb, color.rgb, halationBlendMode, halationOpacity);
+				color.a      = 1.0;
+		}
+		#endif
 
-void FilmEffect(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 color : SV_Target0)
-{
-	color = tex2D(ReShade::BackBuffer, texcoord);
-	if (USE_LENS_SOFT == true)
-	{
-		color = BoxBlur(color, texcoord, ReShade::BackBuffer, FILM_SMOOTH);
-	}
-}
+		#if(FILMFX_3_DIFFUSION)
+		void PS_FilmFX_Diffusion1(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 color : SV_Target0)
+		{
+				float4 diffusion;
+				color        = tex2D(ReShade::BackBuffer, texcoord.xy);
+				diffusion    = GaussBlur22(texcoord.xy, diffusionBufferA, diffusionBlurWidth, 0, 1);
+				color.rgb    = diffusion.rgb;
+				color.a      = 1.0f;
+		}
 
-void FilmEffect2(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 color : SV_Target0)
-{
-	color = tex2D(ReShade::BackBuffer, texcoord);
-	if (USE_VIGNETTE == true)
-	{
-		float2 coord = (texcoord.xy - 0.5) * VIGNETTE_RADIUS;
-		float vignette = saturate(dot(coord.xy, coord.xy));
-		vignette = pow(vignette, VIGNETTE_CURVE);
-		color.rgb = lerp(color.rgb, VIGNETTE_COLOR, vignette * VIGNETTE_INTENSITY);
-	}
+		#if(FILMFX_3_HQ_DIFFUSION)
+		void PS_FilmFX_DiffusionHQ1(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 color : SV_Target0)
+		{
+			float4 diffusion;
+			diffusion    = GaussBlur22(texcoord.xy, diffusionBufferB, diffusionBlurWidth, 0, 0);
+			color.rgb    = diffusion.rgb;
+			color.a      = 1.0f;
+		}
 
-	if (USE_FISHEYE == true)
-	{
-		color = FisheyeFunction(color, texcoord, ORIENTATION, FISHEYE_ZOOM, FISHEYE_DISTORT, FISHEYE_CUBICDISTORT);
-	}
+		void PS_FilmFX_DiffusionHQ2(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 color : SV_Target0)
+		{
+			float4 diffusion;
+			diffusion    = GaussBlur22(texcoord.xy, diffusionBufferA, diffusionBlurWidthHQ, 0, 0);
+			color.rgb    = diffusion.rgb;
+			color.a      = 1.0f;
+		}
+		#endif
+
+		void PS_FilmFX_Diffusion2(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 color : SV_Target0)
+		{
+				float4 diffusion;
+				float blurWidth;
+				color        = tex2D(ReShade::BackBuffer, texcoord.xy);
+
+				#if(FILMFX_3_HQ_DIFFUSION)
+					diffusion  = GaussBlur22(texcoord.xy, diffusionBufferB, diffusionBlurWidthHQ, 0, 1);
+				#else
+					diffusion  = GaussBlur22(texcoord.xy, diffusionBufferB, diffusionBlurWidth, 0, 0);
+				#endif
+				color.rgb    = blendingmode(diffusion.rgb, color.rgb, diffusionBlendMode, diffusionOpacity);
+				color.a      = 1.0f;
+		}
+		#endif
+
+		#if(FILMFX_4_BREATH)
+		void PS_FilmFX_Breath(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 color : SV_Target0)
+		{
+				float4 breath;
+				float  randSeed;
+				breath       = tex2D(ReShade::BackBuffer, texcoord.xy);
+				randSeed     = filmBreathFramerate == 0 ? framecount : floor(timer * 0.001 * filmBreathFramerate);
+				randSeed    %= 10000;
+
+				breath.rgb   *= lerp(filmBreathBrightness.x, filmBreathBrightness.y, simpleNoiseGen(randSeed));
+				breath.rgb    = pow(abs(breath.rgb), 1.0 / lerp(filmBreathMidtone.x, filmBreathMidtone.y, simpleNoiseGen(randSeed)));
+				breath.rgb    = saturation(saturate(breath.rgb), lerp(filmBreathSaturation.x, filmBreathSaturation.y, simpleNoiseGen(randSeed)));
+
+				color.rgb     = breath.rgb;
+				color.a       = 1.0f;
+		}
+		#endif
+
+		#if(FILMFX_5_GATE_WEAVE)
+		void PS_FilmFX_GateWeave(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 color : SV_Target0)
+		{
+				float2 wCoord;
+				float  randSeed;
+				randSeed      = filmGateWeaveFramerate == 0 ? framecount : floor(timer * 0.001 * filmGateWeaveFramerate);
+				randSeed     %= 10000;
+
+				wCoord.xy     = texcoord.xy;
+				wCoord.xy     = float2(wCoord.x + lerp(0, filmGateWeaveOffset.x/100, simpleNoiseGen(randSeed)), wCoord.y - lerp(0, filmGateWeaveOffset.y/100, simpleNoiseGen(randSeed)));
+				color.rgb     = tex2D(ReShade::BackBuffer, wCoord.xy).rgb;
+				color.a       = 1.0f;
+		}
+		#endif
+
 }
 
 // TECHNIQUE //////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
-D_TEQ(NE_FilmEmulation,
-			   "            - NativeEnhancer Film Emulation -\n\n"
-			   "A simple and basic film emulation using color lookup table\n"
-         "combined with various overlay textures to mimic analog film looks.\n\n"
-         "This shader better combined with prod80's shaders.\n"
-         "(Film Grain, Chromatic Abberation, etc.) \n"
-         "\nMake sure to put this technique after any color grading\n"
-         "for better result and compatibility with other shaders.\n",
-			PASS(PostProcessVS, FilmEmulation)
-			PASS(PostProcessVS, FilmEffect))
+technique FilmEmulation
+{
+		pass preColorGrading
+		{
+				VertexShader   = PostProcessVS;
+				PixelShader    = dft_nefilm::PS_PreCorrection;
+		}
 
-D_TEQ(NE_FilmOverlays,
-			   "            - NativeEnhancer Film Emulation -\n\n"
-			   "A simple and basic film emulation LUT shader\n"
-         "with various overlay textures to mimic an old film looks.\n\n"
-         "This is a overlay technique part\n"
-         "\nMake sure to put this technique after any screen, lens, filmic effects\n"
-				 "such as Film Grain, Chromatic Abberation, Lens Flare, Bloom, etc\n"
-         "for better result and compatibility with other shaders.\n",
-			 PASS(PostProcessVS, FilmEffect2)
-			 PASS(PostProcessVS, FilmFrame))
+		pass mainLUT
+		{
+				VertexShader   = PostProcessVS;
+				PixelShader    = dft_nefilm::PS_FilmEmulation;
+		}
+
+		pass colorStore
+		{
+				VertexShader   = PostProcessVS;
+				PixelShader    = dft_nefilm::PS_colorStore;
+				RenderTarget0  = dft_nefilm::texHalationA;
+				RenderTarget1  = dft_nefilm::texDiffusionA;
+		}
+
+		#if(FILMFX_2_HALATION)
+		pass filmFXHalation1
+		{
+				VertexShader   = PostProcessVS;
+				PixelShader    = dft_nefilm::PS_FilmFX_Halation1;
+				RenderTarget0  = dft_nefilm::texHalationB;
+		}
+
+		pass filmFXHalation2
+		{
+				VertexShader   = PostProcessVS;
+				PixelShader    = dft_nefilm::PS_FilmFX_Halation2;
+				RenderTarget0  = dft_nefilm::texHalationA;
+		}
+
+		pass filmFXHalation3
+		{
+				VertexShader   = PostProcessVS;
+				PixelShader    = dft_nefilm::PS_FilmFX_Halation3;
+		}
+		#endif
+
+		#if(FILMFX_3_DIFFUSION)
+		pass filmFXDiffusion1
+		{
+				VertexShader   = PostProcessVS;
+				PixelShader    = dft_nefilm::PS_FilmFX_Diffusion1;
+				RenderTarget0  = dft_nefilm::texDiffusionB;
+		}
+
+		#if(FILMFX_3_HQ_DIFFUSION)
+		pass filmFXDiffusionHQ1
+		{
+				VertexShader   = PostProcessVS;
+				PixelShader    = dft_nefilm::PS_FilmFX_DiffusionHQ1;
+				RenderTarget0  = dft_nefilm::texDiffusionA;
+		}
+
+		pass filmFXDiffusionHQ2
+		{
+				VertexShader   = PostProcessVS;
+				PixelShader    = dft_nefilm::PS_FilmFX_DiffusionHQ2;
+				RenderTarget0  = dft_nefilm::texDiffusionB;
+		}
+		#endif
+
+		pass filmFXDiffusion2
+		{
+				VertexShader   = PostProcessVS;
+				PixelShader    = dft_nefilm::PS_FilmFX_Diffusion2;
+		}
+		#endif
+
+		#if(FILMFX_4_BREATH)
+		pass filmFXBreath
+		{
+				VertexShader   = PostProcessVS;
+				PixelShader    = dft_nefilm::PS_FilmFX_Breath;
+		}
+		#endif
+
+		#if(FILMFX_5_GATE_WEAVE)
+		pass filmFXGateWeave
+		{
+				VertexShader   = PostProcessVS;
+				PixelShader    = dft_nefilm::PS_FilmFX_GateWeave;
+		}
+		#endif
+}
