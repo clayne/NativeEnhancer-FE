@@ -9,18 +9,19 @@
 //
 /////////////////////////////////////////////
 //  How to use :
-//  include this file in your shader file
+//
+//  Include this file in your shader file
 //  make sure it is on top of everything
 //  by adding #include "dMakro.fxh"
 //
 //  Variable Types :
-//  D_INT  = Integer
-//  D_BOOL  = Boolean
+//  D_INT    = Integer
+//  D_BOOL   = Boolean
 //  D_FLOAT  = float
 //  D_FLOAT2 = float2
 //  D_FLOAT3 = float3
 //  D_COLOR  = Color
-//  D_SPC  = Special functions
+//  D_SPC    = Special functions
 //
 //  UI Widget Types :
 //  S   = Slider (any float and integer variables)
@@ -38,7 +39,9 @@
 //
 //
 //
-//  Cheat Sheet -
+//  CHEAT SHEET
+//  ----------------------------------------------------------------------------
+//
 //  Boolean
 //    D_BOOL(variable, label, tooltip, defvalue)
 //  Boolean Categorized
@@ -169,7 +172,7 @@
 //
 */
 
-
+#pragma once
 
 // FLOAT ///////////////////////////////////////////////////////////////////////
 #define DAS_F(nama, tipe, lbel, ttip, step, minx, maxx, defx) \

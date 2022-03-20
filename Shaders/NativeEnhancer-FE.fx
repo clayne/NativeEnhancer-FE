@@ -32,41 +32,35 @@
 */
 
 #include "ReShade.fxh"
-#include "dMakro.fxh"
 #include "NativeEnhancer/miscellaneous.fxh"
 #include "NativeEnhancer/blendingmode.fxh"
 
 namespace dft_nefilm
 {
 		//// PREPROCESSOR DEFINITIONS ////////////////////////////////////////////////
-		// Film softening
-		#ifndef FILMFX_1_SOFTENS
-			#define FILMFX_1_SOFTENS           0
-		#endif
-
 		// Enable halation, simulate glowy edges on bright spot.
-		#ifndef FILMFX_2_HALATION
-			#define FILMFX_2_HALATION          0
+		#ifndef FILMFX_1_HALATION
+			#define FILMFX_1_HALATION          0
 		#endif
 
 		// Simulate hazy foggy light on screen by diffusing lights.
-		#ifndef FILMFX_3_DIFFUSION
-			#define FILMFX_3_DIFFUSION         0
+		#ifndef FILMFX_2_DIFFUSION
+			#define FILMFX_2_DIFFUSION         0
 		#endif
 
 		// Multi layered Lens Diffusion
-		#ifndef FILMFX_3_HQ_DIFFUSION
-			#define FILMFX_3_HQ_DIFFUSION      0
+		#ifndef FILMFX_2_HQ_DIFFUSION
+			#define FILMFX_2_HQ_DIFFUSION      0
 		#endif
 
 		// Simulate film jittery-inconsistent of exposure and color effect.
-		#ifndef FILMFX_4_BREATH
-			#define FILMFX_4_BREATH            0
+		#ifndef FILMFX_3_BREATH
+			#define FILMFX_3_BREATH            0
 		#endif
 
 		// Simulate film frame jitter.
-		#ifndef FILMFX_5_GATE_WEAVE
-			#define FILMFX_5_GATE_WEAVE        0
+		#ifndef FILMFX_4_GATE_WEAVE
+			#define FILMFX_4_GATE_WEAVE        0
 		#endif
 
 		//// USER INTERFACE PARAMETERS /////////////////////////////////////////////
@@ -298,41 +292,42 @@ namespace dft_nefilm
 			ui_max      = 56;
 			> = 2;
 
-		#if(FILMFX_1_SOFTENS)
-		uniform float filmSoftnessBlurWidth <
-			ui_label    = "Film Softness Blur Width";
-			ui_category = "Film FX : Softness";
+		#if(FILMFX_1_HALATION)
+		uniform float halationEdgeWidth <
+			ui_label    = "Halation Edge Width";
+			ui_tooltip  = "Edge Bias Width.\n\n"
+			              "Lower value  = Thinner edge\n"
+			              "Higher value = Thicker edge line";
+			ui_category = "Film FX : Halation";
 			ui_type     = "drag";
 			ui_min      = 1.0;
-			ui_max      = 64.0;
-			ui_step     = 0.01;
-			> = 3.0;
-		#endif
+			ui_max      = 5.0;
+			ui_step     = 0.001;
+			> = 1.000;
 
-		#if(FILMFX_2_HALATION)
-		uniform float halationThreshold <
-			ui_label    = "Halation Threshold Sdjustment";
-			ui_tooltip  = "Limit brightness.\n\n"
-			              "Lower value  = Full screen effect\n"
-			              "Higher value = Limited bright area";
+		uniform float halationEdgeDetail <
+			ui_label    = "Halation Edge Detail";
+			ui_tooltip  = "Edge Detail.\n\n"
+			              "Lower value  = More pronounce detail\n"
+			              "Higher value = Less detail";
+			ui_category = "Film FX : Halation";
+			ui_type     = "drag";
+			ui_min      = 1.0;
+			ui_max      = 5.0;
+			ui_step     = 0.001;
+			> = 2.000;
+
+		uniform float halationEdgeIntensity <
+			ui_label    = "Halation Edge Intensity";
+			ui_tooltip  = "Edge Intensity.\n\n"
+			              "Lower value  = Less detail edge\n"
+			              "Higher value = More intense edge";
 			ui_category = "Film FX : Halation";
 			ui_type     = "drag";
 			ui_min      = 0.0;
-			ui_max      = 1.0;
+			ui_max      = 3.0;
 			ui_step     = 0.001;
-			> = 0.722;
-
-		uniform float halationExp <
-			ui_label    = "Halation Exposure";
-			ui_tooltip  = "Boost highlight tone.\n\n"
-			              "Lower value  = Squashed highlight tone\n"
-			              "Higher value = Boosted highlight tone";
-			ui_category = "Film FX : Halation";
-			ui_type     = "drag";
-			ui_min      = -2.0;
-			ui_max      = 5.0;
-			ui_step     = 0.001;
-			> = 1.0;
+			> = 0.100;
 
 		uniform float halationBlurWidth <
 			ui_label    = "Halation Blur Width";
@@ -342,41 +337,9 @@ namespace dft_nefilm
 			ui_category = "Film FX : Halation";
 			ui_type     = "drag";
 			ui_min      = 1.0;
-			ui_max      = 5.0;
+			ui_max      = 16.0;
 			ui_step     = 0.01;
-			> = 2.0;
-
-		uniform int halationBlendMode <
-			ui_label    = "Halation blend mode";
-			ui_category = "Film FX : Halation";
-			ui_type     = "combo";
-			ui_items    = "Default\0"
-			              "Darken\0"
-			              "Multiply\0"
-			              "Color Burn\0"
-			              "Linear Dodge\0"
-			              "Linear Burn\0"
-			              "Lighten\0"
-			              "Screen\0"
-			              "Color Dodge\0"
-			              "Add\0"
-			              "Overlay\0"
-			              "Softlight\0"
-			              "Vividlight\0"
-			              "Linearlight\0"
-			              "Pinlight\0"
-			              "Hardmix\0"
-			              "Difference\0"
-			              "Exclusion\0"
-			              "Subtract\0"
-			              "Reflect\0"
-			              "Hue\0"
-			              "Saturation\0"
-			              "Color\0"
-			              "Luminosity\0";
-			ui_min      = 0;
-			ui_max      = 24;
-			> = 6;
+			> = 6.0;
 
 		uniform float halationOpacity <
 			ui_label    = "Halation Opacity";
@@ -385,16 +348,27 @@ namespace dft_nefilm
 			ui_min      = 0.0;
 			ui_max      = 1.0;
 			ui_step     = 0.01;
-			> = 1.0;
+			> = 0.7;
 
 		uniform float3 halationTint <
 			ui_label    = "Halation color tint";
 			ui_category = "Film FX : Halation";
 			ui_type     = "color";
 			> = float3( 0.946, 0.105, 0.105 );
+
+		uniform int halationDebug <
+		  ui_label    = "Halation Debugging Mode";
+			ui_category = "Film FX : Halation";
+			ui_type     = "combo";
+			ui_items    = "Default\0"
+			              "Edge Detection\0"
+			              "Blending\0";
+			ui_min      = 0;
+			ui_max      = 3;
+		> = 0;
 		#endif
 
-		#if(FILMFX_3_DIFFUSION)
+		#if(FILMFX_2_DIFFUSION)
 		uniform float diffusionBlurWidth <
 			ui_label    = "Diffusion Blur Width";
 			ui_tooltip  = "Diffusion blur width adjustment.\n\n"
@@ -407,7 +381,7 @@ namespace dft_nefilm
 			ui_step     = 0.01;
 			> = 4.0;
 
-		#if(FILMFX_3_HQ_DIFFUSION)
+		#if(FILMFX_2_HQ_DIFFUSION)
 		uniform float diffusionBlurWidthHQ <
 			ui_label    = "Diffusion Blur Width - HQ";
 			ui_tooltip  = "HQ Diffusion blur width adjustment.\n\n"
@@ -463,7 +437,7 @@ namespace dft_nefilm
 			> = 0.8;
 		#endif
 
-		#if(FILMFX_4_BREATH)
+		#if(FILMFX_3_BREATH)
 		uniform float filmBreathFramerate <
 			ui_label    = "Breath Framerate";
 			ui_tooltip  = "Matching breathing animation to specific framerate.\n\n"
@@ -512,7 +486,7 @@ namespace dft_nefilm
 			> = float2(0.920, 1.010);
 		#endif
 
-		#if(FILMFX_5_GATE_WEAVE)
+		#if(FILMFX_4_GATE_WEAVE)
 		uniform float filmGateWeaveFramerate <
 			ui_label    = "Gate Weave Framerate";
 			ui_tooltip  = "Matching weave animation to specific framerate.\n\n"
@@ -559,15 +533,16 @@ namespace dft_nefilm
 		sampler	diffusionBufferB {Texture = texDiffusionB;};
 
 		//// PIXEL SHADERS /////////////////////////////////////////////////////////
-		void PS_PreCorrection(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 color : SV_Target0)
+		void PS_colorStore(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 halation : SV_Target0, out float4 diffusion : SV_Target1)
+		{
+			halation  = tex2D(ReShade::BackBuffer, texcoord.xy);
+			diffusion = tex2D(ReShade::BackBuffer, texcoord.xy);
+		}
+
+		void PS_PreGrading(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 color : SV_Target0)
 		{
 			float3 kColor, oLum, blended, resHSV, resRGB;
-
-			#if(FILMFX_1_SOFTENS)
-			color        = FastBoxBlur(color, texcoord.xy, ReShade::BackBuffer, filmSoftnessBlurWidth/10);
-			#else
 			color        = tex2D(ReShade::BackBuffer, texcoord.xy);
-			#endif
 
 			// Color temperature by prod80
 			kColor       = KelvinToRGB(kelvinTemp);
@@ -622,58 +597,55 @@ namespace dft_nefilm
 			color.a      = 1.0;
 		}
 
-		void PS_colorStore(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 halation : SV_Target0, out float4 diffusion : SV_Target1)
+		#if(FILMFX_1_HALATION)
+		void PS_FilmFX_Halation1(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 halation : SV_Target0)
 		{
-			halation  = tex2D(ReShade::BackBuffer, texcoord.xy);
-			diffusion = tex2D(ReShade::BackBuffer, texcoord.xy);
-		}
-
-		#if(FILMFX_2_HALATION)
-		void PS_FilmFX_Halation1(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 color : SV_Target0)
-		{
-			float4 halation;
-			halation     = tex2D(halationBufferA, texcoord.xy);
-			halation.rgb = levels(halation.rgb, saturate(halationThreshold), saturate(1.0), 1.0, saturate(0.0), saturate(1.0));
-			halation.rgb = dot(halation.rgb, lumaCoeff);
-			halation.rgb = exp2(halationExp * saturate(halation.rgb)) * halation.rgb;
-			color.rgb    = halation.rgb;
-			color.a      = 1.0f;
+			float2 edgeUV;
+			edgeUV       = float2(halationEdgeWidth / ReShade::ScreenSize.x, halationEdgeWidth / ReShade::ScreenSize.y);
+			halation.rgb = sobelFilter(halationBufferA, edgeUV.x, edgeUV.y, texcoord.xy, halationEdgeDetail, halationEdgeIntensity);
+			halation.a   = 1.0f;
 		}
 
 		void PS_FilmFX_Halation2(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 color : SV_Target0)
 		{
 			float4 halation;
-			halation     = GaussBlur22(texcoord.xy, halationBufferB, halationBlurWidth, 0, 0);
-			color.rgb    = halation.rgb;
-			color.a      = 1.0f;
-		}
-
-		void PS_FilmFX_Halation3(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 color : SV_Target0)
-		{
-			float4 halation;
 			color        = tex2D(ReShade::BackBuffer, texcoord.xy);
-			halation     = GaussBlur22(texcoord.xy, halationBufferA, halationBlurWidth, 0, 1);
-			halation.rgb *= halationTint;
-			color.rgb    = blendingmode(halation.rgb, color.rgb, halationBlendMode, halationOpacity);
-			color.a      = 1.0;
+			//halation     = fastBoxBlur(color, texcoord.xy, halationBufferB, halationBlurWidth);
+			halation     = fastGaussBlur(halationBufferB, texcoord.xy, halationBlurWidth, 4.0, 16.0);
+			halation.rgb = (halation.rgb < 0.5 ? (2.0 * halation.rgb * halationTint) : (1.0 - 2.0 * (1.0 - halation.rgb) * (1.0 - halationTint)));
+
+			switch(halationDebug)
+	    {
+				case 0: // Default
+				{color.rgb = saturate(lerp(color.rgb, max(color.rgb, halation.rgb), halationOpacity));}
+				break;
+				case 1: // Edge detection
+				{color.rgb = tex2D(halationBufferB, texcoord.xy).rgb;}
+				break;
+				case 2: // Halation Blending
+				{color.rgb = halation.rgb;}
+				break;
+			}
+
+			color.a      = 1.0f;
 		}
 		#endif
 
-		#if(FILMFX_3_DIFFUSION)
+		#if(FILMFX_2_DIFFUSION)
 		void PS_FilmFX_Diffusion1(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 color : SV_Target0)
 		{
 			float4 diffusion;
 			color        = tex2D(ReShade::BackBuffer, texcoord.xy);
-			diffusion    = GaussBlur22(texcoord.xy, diffusionBufferA, diffusionBlurWidth, 0, 1);
+			diffusion    = gaussBlur(texcoord.xy, diffusionBufferA, diffusionBlurWidth, 0, 1);
 			color.rgb    = diffusion.rgb;
 			color.a      = 1.0f;
 		}
 
-		#if(FILMFX_3_HQ_DIFFUSION)
+		#if(FILMFX_2_HQ_DIFFUSION)
 		void PS_FilmFX_DiffusionHQ1(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 color : SV_Target0)
 		{
 			float4 diffusion;
-			diffusion    = GaussBlur22(texcoord.xy, diffusionBufferB, diffusionBlurWidth, 0, 0);
+			diffusion    = gaussBlur(texcoord.xy, diffusionBufferB, diffusionBlurWidth, 0, 0);
 			color.rgb    = diffusion.rgb;
 			color.a      = 1.0f;
 		}
@@ -681,7 +653,7 @@ namespace dft_nefilm
 		void PS_FilmFX_DiffusionHQ2(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 color : SV_Target0)
 		{
 			float4 diffusion;
-			diffusion    = GaussBlur22(texcoord.xy, diffusionBufferA, diffusionBlurWidthHQ, 0, 0);
+			diffusion    = gaussBlur(texcoord.xy, diffusionBufferA, diffusionBlurWidthHQ, 0, 0);
 			color.rgb    = diffusion.rgb;
 			color.a      = 1.0f;
 		}
@@ -694,16 +666,16 @@ namespace dft_nefilm
 			color        = tex2D(ReShade::BackBuffer, texcoord.xy);
 
 			#if(FILMFX_3_HQ_DIFFUSION)
-				diffusion  = GaussBlur22(texcoord.xy, diffusionBufferB, diffusionBlurWidthHQ, 0, 1);
+				diffusion  = gaussBlur(texcoord.xy, diffusionBufferB, diffusionBlurWidthHQ, 0, 1);
 			#else
-				diffusion  = GaussBlur22(texcoord.xy, diffusionBufferB, diffusionBlurWidth, 0, 0);
+				diffusion  = gaussBlur(texcoord.xy, diffusionBufferB, diffusionBlurWidth, 0, 0);
 			#endif
 			color.rgb    = blendingmode(diffusion.rgb, color.rgb, diffusionBlendMode, diffusionOpacity);
 			color.a      = 1.0f;
 		}
 		#endif
 
-		#if(FILMFX_4_BREATH)
+		#if(FILMFX_3_BREATH)
 		void PS_FilmFX_Breath(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 color : SV_Target0)
 		{
 			float4 breath;
@@ -721,7 +693,7 @@ namespace dft_nefilm
 		}
 		#endif
 
-		#if(FILMFX_5_GATE_WEAVE)
+		#if(FILMFX_4_GATE_WEAVE)
 		void PS_FilmFX_GateWeave(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 color : SV_Target0)
 		{
 			float2 wCoord;
@@ -741,18 +713,6 @@ namespace dft_nefilm
 	///////////////////////////////////////////////////////////////////////////
 	technique FilmEmulation
 	{
-		pass preColorGrading
-		{
-			VertexShader   = PostProcessVS;
-			PixelShader    = dft_nefilm::PS_PreCorrection;
-		}
-
-		pass mainLUT
-		{
-			VertexShader   = PostProcessVS;
-			PixelShader    = dft_nefilm::PS_FilmEmulation;
-		}
-
 		pass colorStore
 		{
 			VertexShader   = PostProcessVS;
@@ -761,7 +721,19 @@ namespace dft_nefilm
 			RenderTarget1  = dft_nefilm::texDiffusionA;
 		}
 
-		#if(FILMFX_2_HALATION)
+		pass preColorGrading
+		{
+			VertexShader   = PostProcessVS;
+			PixelShader    = dft_nefilm::PS_PreGrading;
+		}
+
+		pass mainLUT
+		{
+			VertexShader   = PostProcessVS;
+			PixelShader    = dft_nefilm::PS_FilmEmulation;
+		}
+
+		#if(FILMFX_1_HALATION)
 		pass filmFXHalation1
 		{
 			VertexShader   = PostProcessVS;
@@ -773,17 +745,10 @@ namespace dft_nefilm
 		{
 			VertexShader   = PostProcessVS;
 			PixelShader    = dft_nefilm::PS_FilmFX_Halation2;
-			RenderTarget0  = dft_nefilm::texHalationA;
-		}
-
-		pass filmFXHalation3
-		{
-			VertexShader   = PostProcessVS;
-			PixelShader    = dft_nefilm::PS_FilmFX_Halation3;
 		}
 		#endif
 
-		#if(FILMFX_3_DIFFUSION)
+		#if(FILMFX_2_DIFFUSION)
 		pass filmFXDiffusion1
 		{
 			VertexShader   = PostProcessVS;
@@ -791,7 +756,7 @@ namespace dft_nefilm
 			RenderTarget0  = dft_nefilm::texDiffusionB;
 		}
 
-		#if(FILMFX_3_HQ_DIFFUSION)
+		#if(FILMFX_2_HQ_DIFFUSION)
 		pass filmFXDiffusionHQ1
 		{
 			VertexShader   = PostProcessVS;
@@ -814,7 +779,7 @@ namespace dft_nefilm
 		}
 		#endif
 
-		#if(FILMFX_4_BREATH)
+		#if(FILMFX_3_BREATH)
 		pass filmFXBreath
 		{
 			VertexShader   = PostProcessVS;
@@ -822,7 +787,7 @@ namespace dft_nefilm
 		}
 		#endif
 
-		#if(FILMFX_5_GATE_WEAVE)
+		#if(FILMFX_4_GATE_WEAVE)
 		pass filmFXGateWeave
 		{
 			VertexShader   = PostProcessVS;
