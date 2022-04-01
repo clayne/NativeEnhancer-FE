@@ -1,660 +1,342 @@
-/*         __                __
-//    ____/ /___ ___  ____ _/ /___________
-//   / __  / __ `__ \/ __ `/ //_/ ___/ __ \
-//  / /_/ / / / / / / /_/ / ,< / /  / /_/ /
-//  \__,_/_/ /_/ /_/\__,_/_/|_/_/   \____/
-//
-//  yet another ReShade UI macro function
-//  by dddfault
-//
-/////////////////////////////////////////////
-//  How to use :
-//
-//  Include this file in your shader file
-//  make sure it is on top of everything
-//  by adding #include "dMakro.fxh"
-//
-//  Variable Types :
-//  D_INT    = Integer
-//  D_BOOL   = Boolean
-//  D_FLOAT  = float
-//  D_FLOAT2 = float2
-//  D_FLOAT3 = float3
-//  D_COLOR  = Color
-//  D_SPC    = Special functions
-//
-//  UI Widget Types :
-//  S   = Slider (any float and integer variables)
-//  I   = Input  (any float and integer variables)
-//  D   = Drag   (any float and integer variables)
-//  R   = Radio  (only integer variables)
-//  C   = Combo  (only integer variables)
-//  L   = List   (only integer variables)
-//
-//  Feature :
-//  K   = Categorized
-//  S   = Simplified
-//        (no tooltip and using default step value
-//        - useful for self explanatory variables)
-//
-//
-//
-//  CHEAT SHEET
-//  ----------------------------------------------------------------------------
-//
-//  Boolean
-//    D_BOOL(variable, label, tooltip, defvalue)
-//  Boolean Categorized
-//    D_BOOL_K(variable, category, label, tooltip, defvalue)
-//  Boolean Simplified
-//    D_BOOL_S(variable, category, label, tooltip, defvalue)
-//
-//  Color
-//    D_COLOR(variable, label, tooltip, defrvalue, defgvalue, defbvalue)
-//  Color Categorized
-//    D_COLOR_K(variable, category, label, tooltip, defrvalue, defgvalue, defbvalue)
-//  Color Simplified
-//    D_COLOR_S(variable, category, label, defrvalue, defgvalue, defbvalue)
-//
-//  Integer Slider
-//    D_INT_S(variable, label, tooltip, minvalue, maxvalue, defvalue)
-//  Integer Input
-//    D_INT_I(variable, label, tooltip, minvalue, maxvalue, defvalue)
-//  Integer Drag
-//    D_INT_D(variable, label, tooltip, minvalue, maxvalue, defvalue)
-//  Integer Radio
-//    D_INT_R(variable, label, tooltip, items, minvalue, maxvalue, defvalue)
-//  Integer Combo
-//    D_INT_C(variable, label, tooltip, items, minvalue, maxvalue, defvalue)
-//  Integer List
-//    D_INT_L(variable, label, tooltip, items, minvalue, maxvalue, defvalue)
-//  Integer Slider Categorized
-//    D_INT_SK(variable, category, label, tooltip, minvalue, maxvalue, defvalue)
-//  Integer Input Categorized
-//    D_INT_IK(variable, category, label, tooltip, minvalue, maxvalue, defvalue)
-//  Integer Drag Categorized
-//    D_INT_DK(variable, category, label, tooltip, minvalue, maxvalue, defvalue)
-//  Integer Radio Categorized
-//    D_INT_RK(variable, category, label, tooltip, items, minvalue, maxvalue, defvalue)
-//  Integer Combo Categorized
-//    D_INT_CK(variable, category, label, tooltip, items, minvalue, maxvalue, defvalue)
-//  Integer List Categorized
-//    D_INT_LK(variable, category, label, tooltip, items, minvalue, maxvalue, defvalue)
-//  Integer Slider Simplified
-//    D_INT_SS(variable, category, label, minvalue, maxvalue, defvalue)
-//  Integer Input Simplified
-//    D_INT_IS(variable, category, label, minvalue, maxvalue, defvalue)
-//  Integer Drag Simplified
-//    D_INT_DS(variable, category, label, minvalue, maxvalue, defvalue)
-//  Integer Radio Simplified
-//    D_INT_RS(variable, category, label, items, minvalue, maxvalue, defvalue)
-//  Integer Combo Simplified
-//    D_INT_CS(variable, category, label, items, minvalue, maxvalue, defvalue)
-//  Integer List Simplified
-//    D_INT_LS(variable, category, label, items, minvalue, maxvalue, defvalue)
-//
-//  Float Slider
-//    D_FLOAT_S(variable, label, tooltip, stepvalue, minvalue, maxvalue, defvalue)
-//  Float Input
-//    D_FLOAT_I(variable, label, tooltip, stepvalue, minvalue, maxvalue, defvalue)
-//  Float Drag
-//    D_FLOAT_D(variable, label, tooltip, stepvalue, minvalue, maxvalue, defvalue)
-//  Float Slider Categorized
-//    D_FLOAT_SK(variable, category, label, tooltip, stepvalue, minvalue, maxvalue, defvalue)
-//  Float Input Categorized
-//    D_FLOAT_IK(variable, category, label, tooltip, stepvalue, minvalue, maxvalue, defvalue)
-//  Float Drag Categorized
-//    D_FLOAT_DK(variable, category, label, tooltip, stepvalue, minvalue, maxvalue, defvalue)
-//  Float Slider Simplified
-//    D_FLOAT_SS(variable, category, label, minvalue, maxvalue, defvalue)
-//  Float Input Simplified
-//    D_FLOAT_IS(variable, category, label, minvalue, maxvalue, defvalue)
-//  Float Drag Simplified
-//    D_FLOAT_DS(variable, category, label, minvalue, maxvalue, defvalue)
-//
-//  Float2 Slider
-//    D_FLOAT2_S(variable, label, tooltip, stepvalue, minvalue, maxvalue, defvaluex, defvaluey)
-//  Float2 Input
-//    D_FLOAT2_I(variable, label, tooltip, stepvalue, minvalue, maxvalue, defvaluex, defvaluey)
-//  Float2 Drag
-//    D_FLOAT2_D(variable, label, tooltip, stepvalue, minvalue, maxvalue, defvaluex, defvaluey)
-//  Float2 Slider Categorized
-//    D_FLOAT2_SK(variable, category, label, tooltip, stepvalue, minvalue, maxvalue, defvaluex, defvaluey)
-//  Float2 Input Categorized
-//    D_FLOAT2_IK(variable, category, label, tooltip, stepvalue, minvalue, maxvalue, defvaluex, defvaluey)
-//  Float2 Drag Categorized
-//    D_FLOAT2_DK(variable, category, label, tooltip, stepvalue, minvalue, maxvalue, defvaluex, defvaluey)
-//  Float2 Slider Simplified
-//    D_FLOAT2_SS(variable, category, label, minvalue, maxvalue, defvaluex, defvaluey)
-//  Float2 Input Simplified
-//    D_FLOAT2_IS(variable, category, label, minvalue, maxvalue, defvaluex, defvaluey)
-//  Float2 Drag Simplified
-//    D_FLOAT2_DS(variable, category, label, minvalue, maxvalue, defvaluex, defvaluey)
-//
-//  Float3 Slider
-//    D_FLOAT3_S(variable, label, tooltip, stepvalue, minvalue, maxvalue, defvaluex, defvaluey, defvaluez)
-//  Float3 Input
-//    D_FLOAT3_I(variable, label, tooltip, stepvalue, minvalue, maxvalue, defvaluex, defvaluey, defvaluez)
-//  Float3 Drag
-//    D_FLOAT3_D(variable, label, tooltip, stepvalue, minvalue, maxvalue, defvaluex, defvaluey, defvaluez)
-//  Float3 Slider Categorized
-//    D_FLOAT3_SK(variable, category, label, tooltip, stepvalue, minvalue, maxvalue, defvaluex, defvaluey, defvaluez)
-//  Float3 Input Categorized
-//    D_FLOAT3_IK(variable, category, label, tooltip, stepvalue, minvalue, maxvalue, defvaluex, defvaluey, defvaluez)
-//  Float3 Drag Categorized
-//    D_FLOAT3_DK(variable, category, label, tooltip, stepvalue, minvalue, maxvalue, defvaluex, defvaluey, defvaluez)
-//  Float3 Slider Simplified
-//    D_FLOAT3_SS(variable, category, label, minvalue, maxvalue, defvaluex, defvaluey, defvaluez)
-//  Float3 Input Simplified
-//    D_FLOAT3_IS(variable, category, label, minvalue, maxvalue, defvaluex, defvaluey, defvaluez)
-//  Float3 Drag Simplified
-//    D_FLOAT3_DS(variable, category, label, minvalue, maxvalue, defvaluex, defvaluey, defvaluez)
-//
-//  Text Categorized
-//    D_SPC_TK(variables, category, text)
-//  Text Simplified
-//    D_SPC_TS(variables, text)
-//  Category Collapser
-//    D_SPC_CC(variable, category)
-//
-//  Sampler
-//    D_SAM(samplrname, textrname)
-//  Sampler with boundary option
-//    D_SAM_A(samplername, texturename, bound)
-//  Texture
-//    D_TEX(texname, texsource)
-//  Texture with custom dimension size
-//    D_TEX_A(texname, texsource, texwidth, texheight)
-//  Technique and passes
-//    D_TEQ(techniquename, tooltip, passes)
-//    PASS(vertexshader, pixelshader)
-//
-//
-*/
-
-#pragma once
-
-// FLOAT ///////////////////////////////////////////////////////////////////////
-#define DAS_F(nama, tipe, lbel, ttip, step, minx, maxx, defx) \
-    uniform float nama \
-    < \
-      ui_type    = tipe; \
-      ui_label   = lbel; \
-      ui_tooltip = ttip; \
-      ui_step    = step; \
-      ui_min     = minx; \
-      ui_max     = maxx; \
-    >            = defx;
-
-#define DAS_FK(nama, tipe, kate, lbel, ttip, step, minx, maxx, defx) \
-    uniform float nama \
-    < \
-      ui_type            = tipe; \
-      ui_category        = kate; \
-      ui_label           = lbel; \
-      ui_tooltip         = ttip; \
-      ui_step            = step; \
-      ui_min             = minx; \
-      ui_max             = maxx; \
-    >                    = defx;
-
-#define DAS_FS(nama, tipe, kate, lbel, minx, maxx, defx) \
-    uniform float nama \
-    < \
-      ui_type            = tipe; \
-      ui_category        = kate; \
-      ui_label           = lbel; \
-      ui_min             = minx; \
-      ui_max             = maxx; \
-    >                    = defx;
-
-// FLOAT2 //////////////////////////////////////////////////////////////////////
-#define DAS_F2(nama, tipe, lbel, ttip, step, minx, maxx, defx, defy) \
-    uniform float2 nama \
-    < \
-      ui_type    = tipe; \
-      ui_label   = lbel; \
-      ui_tooltip = ttip; \
-      ui_step    = step; \
-      ui_min     = minx; \
-      ui_max     = maxx; \
-    >            = float2(defx, defy);
-
-#define DAS_F2K(nama, tipe, kate, lbel, ttip, step, minx, maxx, defx, defy) \
-    uniform float2 nama \
-    < \
-      ui_type            = tipe; \
-      ui_category        = kate; \
-      ui_label           = lbel; \
-      ui_tooltip         = ttip; \
-      ui_step            = step; \
-      ui_min             = minx; \
-      ui_max             = maxx; \
-    >                  = float2(defx, defy);
-
-#define DAS_F2S(nama, tipe, kate, lbel, minx, maxx, defx, defy) \
-    uniform float2 nama \
-    < \
-      ui_type            = tipe; \
-      ui_category        = kate; \
-      ui_label           = lbel; \
-      ui_min             = minx; \
-      ui_max             = maxx; \
-    >                  = float2(defx, defy);
-
-// FLOAT3 //////////////////////////////////////////////////////////////////////
-#define DAS_F3(nama, tipe, lbel, ttip, step, minx, maxx, defx, defy, defz) \
-    uniform float3 nama \
-    < \
-      ui_type    = tipe; \
-      ui_label   = lbel; \
-      ui_tooltip = ttip; \
-      ui_step    = step; \
-      ui_min     = minx; \
-      ui_max     = maxx; \
-    >            = float3(defx, defy, defz);
-
-#define DAS_F3K(nama, tipe, kate, lbel, ttip, step, minx, maxx, defx, defy, defz) \
-    uniform float3 nama \
-    < \
-      ui_type            = tipe; \
-      ui_category        = kate; \
-      ui_label           = lbel; \
-      ui_tooltip         = ttip; \
-      ui_step            = step; \
-      ui_min             = minx; \
-      ui_max             = maxx; \
-    >                    = float3(defx, defy, defz);
-
-#define DAS_F3S(nama, tipe, kate, lbel, minx, maxx, defx, defy, defz) \
-    uniform float3 nama \
-    < \
-      ui_type            = tipe; \
-      ui_category        = kate; \
-      ui_label           = lbel; \
-      ui_min             = minx; \
-      ui_max             = maxx; \
-    >                    = float3(defx, defy, defz);
-
-// INTEGER /////////////////////////////////////////////////////////////////////
-#define DAS_I(nama, tipe, lbel, ttip, minx, maxx, defx) \
-    uniform int nama \
-    < \
-      ui_type    = tipe; \
-      ui_label   = lbel; \
-      ui_tooltip = ttip; \
-      ui_min     = minx; \
-      ui_max     = maxx; \
-    >            = defx;
-
-#define DAS_IK(nama, tipe, kate, lbel, ttip, minx, maxx, defx) \
-    uniform int nama \
-    < \
-      ui_type            = tipe; \
-      ui_category        = kate; \
-      ui_label           = lbel; \
-      ui_tooltip         = ttip; \
-      ui_min             = minx; \
-      ui_max             = maxx; \
-    >                    = defx;
-
-#define DAS_IS(nama, tipe, kate, lbel, minx, maxx, defx) \
-    uniform int nama \
-    < \
-      ui_type            = tipe; \
-      ui_category        = kate; \
-      ui_label           = lbel; \
-      ui_min             = minx; \
-      ui_max             = maxx; \
-    >                    = defx;
-
-#define DAS_IX(nama, tipe, lbel, ttip, item, minx, maxx, defx) \
-    uniform int nama \
-    < \
-      ui_type    = tipe; \
-      ui_label   = lbel; \
-      ui_tooltip = ttip; \
-      ui_items   = item; \
-      ui_min     = minx; \
-      ui_max     = maxx; \
-    >            = defx;
-
-#define DAS_IXK(nama, tipe, kate, lbel, ttip, item, minx, maxx, defx) \
-    uniform int nama \
-    < \
-      ui_type            = tipe; \
-      ui_category        = kate; \
-      ui_label           = lbel; \
-      ui_tooltip         = ttip; \
-      ui_items           = item; \
-      ui_min             = minx; \
-      ui_max             = maxx; \
-    >                    = defx;
-
-#define DAS_IXS(nama, tipe, kate, lbel, item, minx, maxx, defx) \
-    uniform int nama \
-    < \
-      ui_type            = tipe; \
-      ui_category        = kate; \
-      ui_label           = lbel; \
-      ui_items           = item; \
-      ui_min             = minx; \
-      ui_max             = maxx; \
-    >                    = defx;
-
-// BOOELAN /////////////////////////////////////////////////////////////////////
-#define DAS_B(nama, lbel, ttip, defx) \
-    uniform bool nama \
-    < \
-      ui_label   = lbel; \
-      ui_tooltip = ttip; \
-    >            = bool(defx);
-
-#define DAS_BK(nama, kate, lbel, ttip, defx) \
-    uniform bool nama \
-    < \
-      ui_category        = kate; \
-      ui_label           = lbel; \
-      ui_tooltip         = ttip; \
-    >                    = bool(defx);
-
-#define DAS_BS(nama, kate, lbel, defx) \
-    uniform bool nama \
-    < \
-      ui_category        = kate; \
-      ui_label           = lbel; \
-    >                    = bool(defx);
-
-// OTHERS //////////////////////////////////////////////////////////////////////
-#define DAS_C(nama, lbel, ttip, defx, defy, defz) \
-    uniform float3 nama \
-    < \
-      ui_type    = "color"; \
-      ui_label   = lbel; \
-      ui_tooltip = ttip; \
-    >            = float3(defx, defy, defz);
-
-#define DAS_CK(nama, kate, lbel, ttip, defx, defy, defz) \
-    uniform float3 nama \
-    < \
-      ui_type            = "color"; \
-      ui_category        = kate; \
-      ui_label           = lbel; \
-      ui_tooltip         = ttip; \
-    >                    = float3(defx, defy, defz);
-
-#define DAS_CS(nama, kate, lbel, defx, defy, defz) \
-    uniform float3 nama \
-    < \
-      ui_type            = "color"; \
-      ui_category        = kate; \
-      ui_label           = lbel; \\
-    >                    = float3(defx, defy, defz);
-
-#define DAS_TK(nama, kate, teks) \
-    uniform int nama \
-    < \
-      ui_type            = "radio"; \
-      ui_label           = " "; \
-      ui_category        = kate; \
-      ui_text            = teks; \
-    >                    = 0;
-
-#define DAS_TS(nama, teks) \
-    uniform int nama \
-    < \
-      ui_type            = "radio"; \
-      ui_label           = " "; \
-      ui_text            = teks; \
-    >                    = 0;
-
-#define DAS_CC(nama, kate) \
-    uniform int nama \
-    < \
-      ui_type            = "radio"; \
-      ui_category        = kate; \
-      ui_category_closed = true; \
-      ui_label           = " "; \
-    >                    = 0;
-
-// SAMPLERS TEXTURES TECHNIQUES PASSES /////////////////////////////////////////
-#define DAS_SM(nama, turs, addU, addV, addW, magf, minf, mipf, srgb) \
-    sampler nama \
-    { \
-        Texture     = turs; \
-        AddressU    = addU; \
-        AddressV    = addV; \
-        AddressW    = addW; \
-        MagFilter   = magf; \
-        MinFilter   = minf; \
-        MipFilter   = mipf; \
-        SRGBTexture = srgb; \
-    };
-
-#define DAS_TX(nama, sumb, widt, heig, form) \
-    texture nama < source = sumb; > \
-    { \
-        Width  = widt; \
-        Height = heig; \
-        Format = form; \
-    };
-
-#define DAS_TXB(nama, widt, heig, form, mipm) \
-    texture nama \
-    { \
-        Width  = widt; \
-        Height = heig; \
-        Format = form; \
-        MipLevels = mipm; \
-    };
-
-#define DAS_TQ(nama, teks, pass) \
-    technique nama < ui_tooltip = teks; > \
-    { \
-        pass \
-    }
-
-#define PASS(vert, pixe) pass \
-    { \
-        VertexShader = vert; \
-        PixelShader  = pixe; \
-    }
-
-#define PASSA(vert, pixe, rdn1) pass \
-    { \
-        VertexShader = vert; \
-        PixelShader  = pixe; \
-        RenderTarget = rdn1; \
-    }
-
-
 /*
-// All those magic happened here
+                              __                __
+                         ____/ /___ ___  ____ _/ /___________
+                        / __  / __ `__ \/ __ `/ //_/ ___/ __ \
+                       / /_/ / / / / / / /_/ / ,< / /  / /_/ /
+                       \__,_/_/ /_/ /_/\__,_/_/|_/_/   \____/
+
+                      fungsi makro untuk user interface ReShade
+                              dibuat ama mbah.primbon
+
+                              disponsori oleh UnFamouS
+    ////////////////////////////////////////////////////////////////////////////
+
+    LU MUSTI TAU :
+    ==============
+    Sebelum ke panduan penggunaan nya, pertama gua mau bilang bodo amat ama orang
+    luar brow, kaga peduli mau dibilang apa ama mereka, ini file gua suka-suka gua.
+    fakyeu mennn maderpaker.
+
+    Oke sekarang kita ke tutorialnya.
+
+
+    Cara menggunakan makro ini :
+    ============================
+    Pertama, tambahin file ini kedalam shader lu dengan cara #include file ini.
+    Pastiin ini ada di bagian atas, lebih bagus ada dibawah ReShade.fxh
+
+    contoh nih,
+
+    #include "ReShade.fxh"
+    #include "dMakro.fxh"
+    #include "AseDeKon.h"
+    #include ....
+
+    Bisa dilihat diatas kalau dMakro.fxh ditambahin dibawah ReShade.fxh.
+    sisanya dibawah suka-suka lu misalkan lu pake banyak hal.
+
+    "Kenapa kudu gitu bang ?, kenapa ga dipaling atas aja biar estetik ?"
+    Ya biar ga error lah, makro lu perlu variabel parameter yang ada di ReShade.fxh.
+    Jadi ReShade.fxh itu harus duluan yang musti dipanggil ama shader lu.
+
+    Ada beberapa tipe variabel yang didukung ama ini makro. Lebih
+    lengkapnya lu bisa liat daftar dibawah ini :
+
+      Tipe / Jenis Variabel :
+      -----------------------
+      MP_BOOL    = Boolean
+
+      MP_INT     = Integer
+      MP_INT2    = Integer (2 komponen)
+      MP_INT3    = Integer (3 komponen)
+      MP_INT4    = Integer (4 komponen)
+
+      MP_FLOAT   = Floating Point
+      MP_FLOAT2  = Floating Point (2 komponen)
+      MP_FLOAT3  = Floating Point (3 komponen)
+      MP_FLOAT4  = Floating Point (4 komponen)
+
+      MP_COMBO   = Kombinasi Item
+      MP_RADIO   = Opsi Item
+      MP_LIST    = Daftar Item
+
+      MP_COLOR   = Warna
+      MP_TEXT    = Teks
+
+    Nah setelah itu ada juga beberapa jenis Widget yang dimiliki ama UI nya ReShade
+    diantaranya adalah sebagai berikut :
+
+      Jenis - jenis widget UI ReShade :
+      ---------------------------------
+      S          = Slider (bisa dipake di jenis variabel float dan integer)
+      I          = Input  (bisa dipake di jenis variabel float dan integer)
+      D          = Drag   (bisa dipake di jenis variabel float dan integer)
+
+      R          = Radio  (cuma bisa dipake di jenis variabel integer)
+      C          = Combo  (cuma bisa dipake di jenis variabel integer)
+      L          = List   (cuma bisa dipake di jenis variabel integer)
+
+    Kalau kalian liat untuk widget S (Slider), I (Input) dan D (Drag) itu bisa
+    dipakai di kedua jenis variabel float dan int. Sedangkan untuk R (Radio),
+    C (Combo), L (List) itu hanya bisa digunakan pada jenis variabel integer.
+
+    Jujur aja, jenis widget I (Input) itu widget yang jarang dipake, kuno banget bro,
+    sekarang UI sudah gampang dan lebih nyaman dipake bro tinggal ser-geser
+    set sat set aja buat edit. Kaga musti lu input angka spesifik. Kalo lu mau
+    override rentang value yang ada di dalam variabel itu, gua lebih menyarankan elu
+    untuk menggunakan widget D (Drag), why ? karena lu bisa ser-geser buat ngubah
+    valuenya, dan lu bisa input dengan cara double click di variabel parameternya.
+
+    Okehh.. mungkin lu sekarang agak bingung, kenapa ini namanya dipersingkat
+    MP_INT, MP_FLOAT dll untuk jenis variabel nya, dan satu huruf S, I, D, R, C, L untuk
+    jenis widgetnya. Misal lu butuh makro dengan jenis float dan widget slider,
+    tinggal pake MP_FLOAT_S(), atau lu perlu float3 dengan widget drag, jadinya
+    MP_FLOAT3_D() kalo mau diubah dari drag ke slider tinggal ubah aja D ke S,
+    seperti itu. Ini kan makro ya bro, fungsi nya makro itu adalah menyederhanakan
+    sesuatu yang belibet banget bro.
+
+    Jadi setelah lu mengerti apa jenis variabel makro nya sekarang gua akan contohin
+    gimana misalkan lu perlu makro ini untuk variabel parameter shader elu.
+
+    (File shader tutorialnya ada di paket penjualan, kalian bisa cek sendiri.)
+
+    Fitur kategorisasi, kalau lu mau parameterlu punya kategori, tinggal panggil
+    definisi KATEGORISASI. Caranya tinggal tulis aja di bagian atas sebelum include
+    dengan nambahin line #define KATEGORISASI. ini berfungsi untuk mengaktifkan
+    kategorinya.
+
+    Setelah itu di setiap kelompok parameter, lu kasih #define KATEGORI(x, y).
+    x itu mewakili nama kategori yang bakal lu pakai, dan y itu untuk fungsi buka
+    tutup kategori (diisi, buka / tutup / true / false). setelah itu kasih #undef
+    di bagian bawah setiap kategorinya.
+
 */
 
-// Boolean macros
-#define D_BOOL(variable, label, tooltip, defvalue) \
-  DAS_B(variable, label, tooltip, defvalue)
+//// VERSION CHECKING //////////////////////////////////////////////////////////
 
-#define D_BOOL_K(variable, category, label, tooltip, defvalue) \
-  DAS_BK(variable, category, label, tooltip, defvalue)
+#define DMAKRO_VERSION          1023
 
-#define D_BOOL_S(variable, category, label, tooltip, defvalue) \
-  DAS_BK(variable, category, label, tooltip, defvalue)
+#define RESHADE __RESHADE__
+#define VERSION(MAJOR, MINOR, REVISION) \
+  (MAJOR * 10000 + MINOR * 100 + REVISION)
 
-// Color macros
-#define D_COLOR(variable, label, tooltip, defrvalue, defgvalue, defbvalue) \
-  DAS_C(variable, label, tooltip, defrvalue, defgvalue, defbvalue)
+#if DMAKRO_VERSION_REQUIREMENT < DMAKRO_VERSION
+ #error "You are using an outdated dMakro.fxh"
+ #error "Please download updated version from github.com/dddfault/dMakro"
+#endif
 
-#define D_COLOR_K(variable, category, label, tooltip, defrvalue, defgvalue, defbvalue) \
-  DAS_CK(variable, category, label, tooltip, defrvalue, defgvalue, defbvalue)
+#if !defined(DMAKRO_VERSION_REQUIREMENT)
+ #error "Incompatible dMakro.fxh version. (dMakro might be missing on this shader)"
+ #error "Please check requirement version."
+#endif
 
-#define D_COLOR_S(variable, category, label, defrvalue, defgvalue, defbvalue) \
-  DAS_CS(variable, category, label, defrvalue, defgvalue, defbvalue)
+#if !defined(RESHADE) || RESHADE < RESHADE_VERSION_REQUIREMENT
+	#error "Incompatible ReShade version."
+  #error "Please check requirement version above."
+#endif
 
-// Integer macros
-#define D_INT_S(variable, label, tooltip, minvalue, maxvalue, defvalue) \
-  DAS_I(variable, "slider", label, tooltip, minvalue, maxvalue, defvalue)
+//// API AND GPU VENDOR ////////////////////////////////////////////////////////
 
-#define D_INT_I(variable, label, tooltip, minvalue, maxvalue, defvalue) \
-  DAS_I(variable, "input", label, tooltip, minvalue, maxvalue, defvalue)
+#define API  __RENDERER__
+#if   ((API >= 0x9000)  && (API < 0xA000))
+    #define D3D9 API
+#elif ((API >= 0xA000)  && (API < 0xB000))
+    #define D3D10 API
+#elif ((API >= 0xB000)  && (API < 0xC000))
+    #define D3D11 API
+#elif ((API >= 0xC000)  && (API < 0xD000))
+    #define D3D12 API
+#elif ((API >= 0x10000) && (API < 0x20000))
+    #define OpenGL API
+#elif ((API >= 0x20000) && (API < 0x30000))
+    #define Vulkan API
+#endif
 
-#define D_INT_D(variable, label, tooltip, minvalue, maxvalue, defvalue) \
-  DAS_I(variable, "drag", label, tooltip, minvalue, maxvalue, defvalue)
+#define GPU  __VENDOR__
+#if   ((GPU == 0x1002) && (GPU == 0x1022))
+  #define AMD GPU
+#elif (GPU == 0x10DE)
+  #define NVIDIA GPU
+#elif (GPU == 0x8086)
+  #define INTEL GPU
+#endif
 
-#define D_INT_R(variable, label, tooltip, items, minvalue, maxvalue, defvalue) \
-  DAS_IX(variable, "radio", label, tooltip, items, minvalue, maxvalue, defvalue)
+//// TEMPLATE UI RESHADE ///////////////////////////////////////////////////////
 
-#define D_INT_C(variable, label, tooltip, items, minvalue, maxvalue, defvalue) \
-  DAS_IX(variable, "combo", label, tooltip, items, minvalue, maxvalue, defvalue)
+#define ui_reshade(jenis_data, nama_variabel, anotasi, value_bawaan) \
+    uniform jenis_data nama_variabel < anotasi > = value_bawaan
 
-#define D_INT_L(variable, label, tooltip, items, minvalue, maxvalue, defvalue) \
-  DAS_IX(variable, "list", label, tooltip, items, minvalue, maxvalue, defvalue)
+#define mp_jenis_widget(m)   ui_type     = ""#m;
+#define mp_label(m)          ui_label    = ""##m;
+#define mp_tooltip(m)        ui_tooltip  = ""##m;
+#define mp_teks(m)           ui_text     = ""##m;
+#define mp_items(m)          ui_items    = ""##m;
+#define mp_jarak(m)          ui_spacing  = m;
+#define mp_minimal(m)        ui_min      = m;
+#define mp_maksimal(m)       ui_max      = m;
+#define mp_step(m)           ui_step     = m;
+#define mp_value(m)					              (m);
 
-#define D_INT_SK(variable, category, label, tooltip, minvalue, maxvalue, defvalue) \
-  DAS_IK(variable, "slider", category, label, tooltip, minvalue, maxvalue, defvalue)
+#ifdef KATEGORISASI
+  #define mp_kategori(m, p) \
+   ui_category        = ##m;\
+   ui_category_closed = p;
+#else
+  #define mp_kategori(m, p) \
+  ui_category         = ""; \
+  ui_category_closed = false;
+#endif
 
-#define D_INT_IK(variable, category, label, tooltip, minvalue, maxvalue, defvalue) \
-  DAS_IK(variable, "input", category, label, tooltip, minvalue, maxvalue, defvalue)
+#define null
+#define kosong
+#define buka    false
+#define tutup   true
 
-#define D_INT_DK(variable, category, label, tooltip, minvalue, maxvalue, defvalue) \
-  DAS_IK(variable, "drag", category, label, tooltip, minvalue, maxvalue, defvalue)
+//// RESHADE BASE //////////////////////////////////////////////////////////////
 
-#define D_INT_RK(variable, category, label, tooltip, items, minvalue, maxvalue, defvalue) \
-  DAS_IXK(variable, "radio", category, label, tooltip, items, minvalue, maxvalue, defvalue)
+#define MP_BASE_UI(jenis_data, nama_variabel, jenis_widget, label, tooltip, teks, items, jarak, minimal, maksimal, step, value_bawaan) \
+    ui_reshade(jenis_data, nama_variabel, \
+      mp_jenis_widget(jenis_widget)       \
+      mp_label(label)                     \
+      mp_tooltip(tooltip)                 \
+      mp_teks(teks)                       \
+      mp_items(items)                     \
+      mp_kategori(KATEGORI, TERTUTUP)     \
+      mp_jarak(jarak)                     \
+      mp_minimal(minimal)                 \
+      mp_maksimal(maksimal)               \
+      mp_step(step),                      \
+      mp_value(value_bawaan))
 
-#define D_INT_CK(variable, category, label, tooltip, items, minvalue, maxvalue, defvalue) \
-  DAS_IXK(variable, "combo", category, label, tooltip, items, minvalue, maxvalue, defvalue)
+//// FLOAT /////////////////////////////////////////////////////////////////////
+#define MP_FLOAT_R(nama_variabel, jenis_widget, label, tooltip, teks, jarak, minimal, maksimal, step, value_bawaan) \
+	MP_BASE_UI(float, nama_variabel, jenis_widget, label, tooltip, teks, null, jarak, minimal, maksimal, step, value_bawaan)
 
-#define D_INT_LK(variable, category, label, tooltip, items, minvalue, maxvalue, defvalue) \
-  DAS_IXK(variable, "list", category, label, tooltip, items, minvalue, maxvalue, defvalue)
+#define MP_FLOAT_S(nama_variabel, label, tooltip, teks, jarak, minimal, maksimal, step, value_bawaan) \
+	MP_BASE_UI(float, nama_variabel, slider, label, tooltip, teks, null, jarak, minimal, maksimal, step, value_bawaan)
 
-#define D_INT_SS(variable, category, label, minvalue, maxvalue, defvalue) \
-  DAS_IS(variable, "slider", category, label, minvalue, maxvalue, defvalue)
+#define MP_FLOAT_I(nama_variabel, label, tooltip, teks, jarak, minimal, maksimal, step, value_bawaan) \
+	MP_BASE_UI(float, nama_variabel, input, label, tooltip, teks, null, jarak, minimal, maksimal, step, value_bawaan)
 
-#define D_INT_IS(variable, category, label, minvalue, maxvalue, defvalue) \
-  DAS_IS(variable, "input", category, label, minvalue, maxvalue, defvalue)
+#define MP_FLOAT_D(nama_variabel, label, tooltip, teks, jarak, minimal, maksimal, step, value_bawaan) \
+	MP_BASE_UI(float, nama_variabel, drag, label, tooltip, teks, null, jarak, minimal, maksimal, step, value_bawaan)
 
-#define D_INT_DS(variable, category, label, minvalue, maxvalue, defvalue) \
-  DAS_IS(variable, "drag", category, label, minvalue, maxvalue, defvalue)
 
-#define D_INT_RS(variable, category, label, items, minvalue, maxvalue, defvalue) \
-  DAS_IXS(variable, "radio", category, label, items, minvalue, maxvalue, defvalue)
+#define MP_FLOAT2_R(nama_variabel, jenis_widget, label, tooltip, teks, jarak, minimal, maksimal, step, value_bawaan) \
+	MP_BASE_UI(float2, nama_variabel, jenis_widget, label, tooltip, teks, null, jarak, minimal, maksimal, step, value_bawaan)
 
-#define D_INT_CS(variable, category, label, items, minvalue, maxvalue, defvalue) \
-  DAS_IXS(variable, "combo", category, label, items, minvalue, maxvalue, defvalue)
+#define MP_FLOAT2_S(nama_variabel, label, tooltip, teks, jarak, minimal, maksimal, step, value_bawaan) \
+	MP_BASE_UI(float2, nama_variabel, slider, label, tooltip, teks, null, jarak, minimal, maksimal, step, value_bawaan)
 
-#define D_INT_LS(variable, category, label, items, minvalue, maxvalue, defvalue) \
-  DAS_IXS(variable, "list", category, label, items, minvalue, maxvalue, defvalue)
+#define MP_FLOAT2_I(nama_variabel, label, tooltip, teks, jarak, minimal, maksimal, step, value_bawaan) \
+	MP_BASE_UI(float2, nama_variabel, input, label, tooltip, teks, null, jarak, minimal, maksimal, step, value_bawaan)
 
-// Float macros
-#define D_FLOAT_S(variable, label, tooltip, stepvalue, minvalue, maxvalue, defvalue) \
-  DAS_F(variable, "slider", label, tooltip, stepvalue, minvalue, maxvalue, defvalue)
+#define MP_FLOAT2_D(nama_variabel, label, tooltip, teks, jarak, minimal, maksimal, step, value_bawaan) \
+	MP_BASE_UI(float2, nama_variabel, drag, label, tooltip, teks, null, jarak, minimal, maksimal, step, value_bawaan)
 
-#define D_FLOAT_I(variable, label, tooltip, stepvalue, minvalue, maxvalue, defvalue) \
-  DAS_F(variable, "input", label, tooltip, stepvalue, minvalue, maxvalue, defvalue)
 
-#define D_FLOAT_D(variable, label, tooltip, stepvalue, minvalue, maxvalue, defvalue) \
-  DAS_F(variable, "drag", label, tooltip, stepvalue, minvalue, maxvalue, defvalue)
+#define MP_FLOAT3_R(nama_variabel, jenis_widget, label, tooltip, teks, jarak, minimal, maksimal, step, value_bawaan) \
+	MP_BASE_UI(float3, nama_variabel, jenis_widget, label, tooltip, teks, null, jarak, minimal, maksimal, step, value_bawaan)
 
-#define D_FLOAT_SK(variable, category, label, tooltip, stepvalue, minvalue, maxvalue, defvalue) \
-  DAS_FK(variable, "slider", category, label, tooltip, stepvalue, minvalue, maxvalue, defvalue)
+#define MP_FLOAT3_S(nama_variabel, label, tooltip, teks, jarak, minimal, maksimal, step, value_bawaan) \
+	MP_BASE_UI(float3, nama_variabel, slider, label, tooltip, teks, null, jarak, minimal, maksimal, step, value_bawaan)
 
-#define D_FLOAT_IK(variable, category, label, tooltip, stepvalue, minvalue, maxvalue, defvalue) \
-  DAS_FK(variable, "input", category, label, tooltip, stepvalue, minvalue, maxvalue, defvalue)
+#define MP_FLOAT3_I(nama_variabel, label, tooltip, teks, jarak, minimal, maksimal, step, value_bawaan) \
+	MP_BASE_UI(float3, nama_variabel, input, label, tooltip, teks, null, jarak, minimal, maksimal, step, value_bawaan)
 
-#define D_FLOAT_DK(variable, category, label, tooltip, stepvalue, minvalue, maxvalue, defvalue) \
-  DAS_FK(variable, "drag", category, label, tooltip, stepvalue, minvalue, maxvalue, defvalue)
+#define MP_FLOAT3_D(nama_variabel, label, tooltip, teks, jarak, minimal, maksimal, step, value_bawaan) \
+	MP_BASE_UI(float3, nama_variabel, drag, label, tooltip, teks, null, jarak, minimal, maksimal, step, value_bawaan)
 
-#define D_FLOAT_SS(variable, category, label, minvalue, maxvalue, defvalue) \
-  DAS_FS(variable, "slider", category, label, minvalue, maxvalue, defvalue)
 
-#define D_FLOAT_IS(variable, category, label, minvalue, maxvalue, defvalue) \
-  DAS_FS(variable, "input", category, label, minvalue, maxvalue, defvalue)
+#define MP_FLOAT4_R(nama_variabel, jenis_widget, label, tooltip, teks, jarak, minimal, maksimal, step, value_bawaan) \
+	MP_BASE_UI(float4, nama_variabel, jenis_widget, label, tooltip, teks, null, jarak, minimal, maksimal, step, value_bawaan)
 
-#define D_FLOAT_DS(variable, category, label, minvalue, maxvalue, defvalue) \
-  DAS_FS(variable, "drag", category, label, minvalue, maxvalue, defvalue)
+#define MP_FLOAT4_S(nama_variabel, label, tooltip, teks, jarak, minimal, maksimal, step, value_bawaan) \
+	MP_BASE_UI(float4, nama_variabel, slider, label, tooltip, teks, null, jarak, minimal, maksimal, step, value_bawaan)
 
-// Float 2 macros
-#define D_FLOAT2_S(variable, label, tooltip, stepvalue, minvalue, maxvalue, defvaluex, defvaluey) \
-  DAS_F2(variable, "slider", label, tooltip, stepvalue, minvalue, maxvalue, defvaluex, defvaluey)
+#define MP_FLOAT4_I(nama_variabel, label, tooltip, teks, jarak, minimal, maksimal, step, value_bawaan) \
+	MP_BASE_UI(float4, nama_variabel, input, label, tooltip, teks, null, jarak, minimal, maksimal, step, value_bawaan)
 
-#define D_FLOAT2_I(variable, label, tooltip, stepvalue, minvalue, maxvalue, defvaluex, defvaluey) \
-  DAS_F2(variable, "input", label, tooltip, stepvalue, minvalue, maxvalue, defvaluex, defvaluey)
+#define MP_FLOAT4_D(nama_variabel, label, tooltip, teks, jarak, minimal, maksimal, step, value_bawaan) \
+	MP_BASE_UI(float4, nama_variabel, drag, label, tooltip, teks, null, jarak, minimal, maksimal, step, value_bawaan)
 
-#define D_FLOAT2_D(variable, label, tooltip, stepvalue, minvalue, maxvalue, defvaluex, defvaluey) \
-  DAS_F2(variable, "drag", label, tooltip, stepvalue, minvalue, maxvalue, defvaluex, defvaluey)
+//// INTEGER ///////////////////////////////////////////////////////////////////
 
-#define D_FLOAT2_SK(variable, category, label, tooltip, stepvalue, minvalue, maxvalue, defvaluex, defvaluey) \
-  DAS_F2K(variable, "slider", category, label, tooltip, stepvalue, minvalue, maxvalue, defvaluex, defvaluey)
+#define MP_INT_R(nama_variabel, jenis_widget, label, tooltip, teks, jarak, minimal, maksimal, step, value_bawaan) \
+	MP_BASE_UI(int, nama_variabel, jenis_widget, label, tooltip, teks, null, jarak, minimal, maksimal, step, value_bawaan)
 
-#define D_FLOAT2_IK(variable, category, label, tooltip, stepvalue, minvalue, maxvalue, defvaluex, defvaluey) \
-  DAS_F2K(variable, "input", category, label, tooltip, stepvalue, minvalue, maxvalue, defvaluex, defvaluey)
+#define MP_INT_S(nama_variabel, label, tooltip, teks, jarak, minimal, maksimal, step, value_bawaan) \
+	MP_BASE_UI(int, nama_variabel, slider, label, tooltip, teks, null, jarak, minimal, maksimal, step, value_bawaan)
 
-#define D_FLOAT2_DK(variable, category, label, tooltip, stepvalue, minvalue, maxvalue, defvaluex, defvaluey) \
-  DAS_F2K(variable, "drag", category, label, tooltip, stepvalue, minvalue, maxvalue, defvaluex, defvaluey)
+#define MP_INT_I(nama_variabel, label, tooltip, teks, jarak, minimal, maksimal, step, value_bawaan) \
+	MP_BASE_UI(int, nama_variabel, input, label, tooltip, teks, null, jarak, minimal, maksimal, step, value_bawaan)
 
-#define D_FLOAT2_SS(variable, category, label, minvalue, maxvalue, defvaluex, defvaluey) \
-  DAS_F2S(variable, "slider", category, label, minvalue, maxvalue, defvaluex, defvaluey)
+#define MP_INT_D(nama_variabel, label, tooltip, teks, jarak, minimal, maksimal, step, value_bawaan) \
+	MP_BASE_UI(int, nama_variabel, drag, label, tooltip, teks, null, jarak, minimal, maksimal, step, value_bawaan)
 
-#define D_FLOAT2_IS(variable, category, label, minvalue, maxvalue, defvaluex, defvaluey) \
-  DAS_F2S(variable, "input", category, label, minvalue, maxvalue, defvaluex, defvaluey)
 
-#define D_FLOAT2_DS(variable, category, label, minvalue, maxvalue, defvaluex, defvaluey) \
-  DAS_F2S(variable, "drag", category, label, minvalue, maxvalue, defvaluex, defvaluey)
+#define MP_INT2_R(nama_variabel, jenis_widget, label, tooltip, teks, jarak, minimal, maksimal, step, value_bawaan) \
+	MP_BASE_UI(int2, nama_variabel, jenis_widget, label, tooltip, teks, null, jarak, minimal, maksimal, step, value_bawaan)
 
-// float 3 macros
-#define D_FLOAT3_S(variable, label, tooltip, stepvalue, minvalue, maxvalue, defvaluex, defvaluey, defvaluez) \
-  DAS_F3(variable, "slider", label, tooltip, stepvalue, minvalue, maxvalue, defvaluex, defvaluey, defvaluez)
+#define MP_INT2_S(nama_variabel, label, tooltip, teks, jarak, minimal, maksimal, step, value_bawaan) \
+	MP_BASE_UI(int2, nama_variabel, slider, label, tooltip, teks, null, jarak, minimal, maksimal, step, value_bawaan)
 
-#define D_FLOAT3_I(variable, label, tooltip, stepvalue, minvalue, maxvalue, defvaluex, defvaluey, defvaluez) \
-  DAS_F3(variable, "input", label, tooltip, stepvalue, minvalue, maxvalue, defvaluex, defvaluey, defvaluez)
+#define MP_INT2_I(nama_variabel, label, tooltip, teks, jarak, minimal, maksimal, step, value_bawaan) \
+	MP_BASE_UI(int2, nama_variabel, input, label, tooltip, teks, null, jarak, minimal, maksimal, step, value_bawaan)
 
-#define D_FLOAT3_D(variable, label, tooltip, stepvalue, minvalue, maxvalue, defvaluex, defvaluey, defvaluez) \
-  DAS_F3(variable, "drag", label, tooltip, stepvalue, minvalue, maxvalue, defvaluex, defvaluey, defvaluez)
+#define MP_INT2_D(nama_variabel, label, tooltip, teks, jarak, minimal, maksimal, step, value_bawaan) \
+	MP_BASE_UI(int2, nama_variabel, drag, label, tooltip, teks, null, jarak, minimal, maksimal, step, value_bawaan)
 
-#define D_FLOAT3_SK(variable, category, label, tooltip, stepvalue, minvalue, maxvalue, defvaluex, defvaluey, defvaluez) \
-  DAS_F3K(variable, "slider", category, label, tooltip, stepvalue, minvalue, maxvalue, defvaluex, defvaluey, defvaluez)
 
-#define D_FLOAT3_IK(variable, category, label, tooltip, stepvalue, minvalue, maxvalue, defvaluex, defvaluey, defvaluez) \
-  DAS_F3K(variable, "input", category, label, tooltip, stepvalue, minvalue, maxvalue, defvaluex, defvaluey, defvaluez)
+#define MP_INT3_R(nama_variabel, jenis_widget, label, tooltip, teks, jarak, minimal, maksimal, step, value_bawaan) \
+	MP_BASE_UI(int3, nama_variabel, jenis_widget, label, tooltip, teks, null, jarak, minimal, maksimal, step, value_bawaan)
 
-#define D_FLOAT3_DK(variable, category, label, tooltip, stepvalue, minvalue, maxvalue, defvaluex, defvaluey, defvaluez) \
-  DAS_F3K(variable, "drag", category, label, tooltip, stepvalue, minvalue, maxvalue, defvaluex, defvaluey, defvaluez)
+#define MP_INT3_S(nama_variabel, label, tooltip, teks, jarak, minimal, maksimal, step, value_bawaan) \
+	MP_BASE_UI(int3, nama_variabel, slider, label, tooltip, teks, null, jarak, minimal, maksimal, step, value_bawaan)
 
-#define D_FLOAT3_SS(variable, category, label, minvalue, maxvalue, defvaluex, defvaluey, defvaluez) \
-  DAS_F3S(variable, "slider", category, label, minvalue, maxvalue, defvaluex, defvaluey, defvaluez)
+#define MP_INT3_I(nama_variabel, label, tooltip, teks, jarak, minimal, maksimal, step, value_bawaan) \
+	MP_BASE_UI(int3, nama_variabel, input, label, tooltip, teks, null, jarak, minimal, maksimal, step, value_bawaan)
 
-#define D_FLOAT3_IS(variable, category, label, minvalue, maxvalue, defvaluex, defvaluey, defvaluez) \
-  DAS_F3S(variable, "input", category, label, minvalue, maxvalue, defvaluex, defvaluey, defvaluez)
+#define MP_INT3_D(nama_variabel, label, tooltip, teks, jarak, minimal, maksimal, step, value_bawaan) \
+	MP_BASE_UI(int3, nama_variabel, drag, label, tooltip, teks, null, jarak, minimal, maksimal, step, value_bawaan)
 
-#define D_FLOAT3_DS(variable, category, label, minvalue, maxvalue, defvaluex, defvaluey, defvaluez) \
-  DAS_F3S(variable, "drag", category, label, minvalue, maxvalue, defvaluex, defvaluey, defvaluez)
 
-// Others
-#define D_SPC_TK(variables, category, text) \
-  DAS_TK(variables, category, text)
+#define MP_INT4_R(nama_variabel, jenis_widget, label, tooltip, teks, jarak, minimal, maksimal, step, value_bawaan) \
+	MP_BASE_UI(int4, nama_variabel, jenis_widget, label, tooltip, teks, null, jarak, minimal, maksimal, step, value_bawaan)
 
-#define D_SPC_TS(variables, text) \
-  DAS_TS(variables, text)
+#define MP_INT4_S(nama_variabel, label, tooltip, teks, jarak, minimal, maksimal, step, value_bawaan) \
+	MP_BASE_UI(int4, nama_variabel, slider, label, tooltip, teks, null, jarak, minimal, maksimal, step, value_bawaan)
 
-#define D_SPC_CC(variable, category) \
-  DAS_CC(variable, category)
+#define MP_INT4_I(nama_variabel, label, tooltip, teks, jarak, minimal, maksimal, step, value_bawaan) \
+	MP_BASE_UI(int4, nama_variabel, input, label, tooltip, teks, null, jarak, minimal, maksimal, step, value_bawaan)
 
-#define D_SAM(samplername, texturename) \
-  DAS_SM(samplername, texturename, CLAMP, CLAMP, CLAMP, LINEAR, LINEAR, LINEAR, false)
+#define MP_INT4_D(nama_variabel, label, tooltip, teks, jarak, minimal, maksimal, step, value_bawaan) \
+	MP_BASE_UI(int4, nama_variabel, drag, label, tooltip, teks, null, jarak, minimal, maksimal, step, value_bawaan)
 
-#define D_SAM_A(samplername, texturename, bound) \
-  DAS_SM(samplername, texturename, bound, bound, bound, LINEAR, LINEAR, LINEAR, false)
+//// BOOLEAN | COMBO | RADIO | LIST | COLOR | TEXT /////////////////////////////
 
-#define D_TEX(texname, texsource) \
-  DAS_TX(texname, texsource, BUFFER_WIDTH, BUFFER_HEIGHT, RGBA8)
+#define MP_BOOL(nama_variabel, label, tooltip, teks, jarak, value_bawaan) \
+	MP_BASE_UI(bool, nama_variabel, null, label, tooltip, teks, null, jarak, 0, 0, 0, value_bawaan)
 
-#define D_TEX_A(texname, texsource, texwidth, texheight) \
-  DAS_TX(texname, texsource, texwidth, texheight, RGBA8)
+#define MP_COMBO(nama_variabel, label, tooltip, teks, items, jarak, minimal, maksimal, value_bawaan) \
+	MP_BASE_UI(int, nama_variabel, combo, label, tooltip, teks, items, jarak, minimal, maksimal, 0, value_bawaan)
 
-#define D_TEX_B(texname, texwidth, texheight, miplevs) \
-  DAS_TXB(texname, texwidth, texheight, RGBA8, miplevs)
+#define MP_RADIO(nama_variabel, label, tooltip, teks, items, jarak, minimal, maksimal, value_bawaan) \
+	MP_BASE_UI(int, nama_variabel, radio, label, tooltip, teks, items, jarak, minimal, maksimal, 0, value_bawaan)
 
-#define D_TEQ(techniquename, tooltip, passes) \
-  DAS_TQ(techniquename, tooltip, passes)
+#define MP_LIST(nama_variabel, label, tooltip, teks, items, jarak, minimal, maksimal, value_bawaan) \
+	MP_BASE_UI(int, nama_variabel, list, label, tooltip, teks, items, jarak, minimal, maksimal, 0, value_bawaan)
+
+#define MP_COLOR(nama_variabel, label, tooltip, teks, jarak, value_bawaan) \
+  MP_BASE_UI(float3, nama_variabel, color, label, tooltip, teks, null, jarak, 0, 1, 1, value_bawaan)
+
+#define MP_TEXT(nama_variabel, teks, jarak) \
+  MP_BASE_UI(int, nama_variabel, radio, " ", null, teks, null, jarak, 0, 0, 0, 0) \
+
+#ifdef KATEGORI
+  #undef  KATEGORI
+#endif
+
+#ifdef TERTUTUP
+  #undef  TERTUTUP
+#endif

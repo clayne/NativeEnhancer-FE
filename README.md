@@ -32,24 +32,17 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-NativeEnhancer Film Emulation LUT is a color lookup table texture preset
-for ReShade. Contained in this preset are LUT texture which do all of the hardwork
-instead of using bunch of shaders.
-
-A Lookup Table (LUT) is a function for mapping an input color to an output color.
-Using a texture is extremely fast and has low performance impact compared to using
-a multitude of shaders. The LUT textures was created in Photoshop with custom Lightroom
-presets to achieve filmic look which hard to do using SweetFX or other shader.
-
-This preset only handles the color. You can enable other effects to enhance the
-preset further.
+NATIVENHANCER is a film emulation shader using color-lookup table and lot of
+simplistic and basic methods to achieve a film looks. NATIVENHANCER have some
+of visual film imperfection effect such as film halaition, lens diffusion, bloom,
+film breath, gate weave and film grain
 
 <!-- GETTING STARTED -->
 ## Getting Started
 
 ### Prerequisites
 ```sh
-ReShade 4.8.x, (Latest version is recommended)
+ReShade Version 4.9.1, (Latest version is recommended)
 ```
 
 ### Installation
