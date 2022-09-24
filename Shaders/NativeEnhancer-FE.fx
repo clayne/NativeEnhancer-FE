@@ -61,11 +61,6 @@ namespace dft_nefilm
         #define FILMFX_2_DIFFUSION         0
     #endif
 
-    // Multi layered Lens Diffusion (FilmFX Diffusion must be enabled)
-    #ifndef FILMFX_2_HQ_DIFFUSION
-        #define FILMFX_2_HQ_DIFFUSION      0
-    #endif
-
     // Simulate film jittery-inconsistent of exposure and color effect.
     #ifndef FILMFX_3_BREATH
         #define FILMFX_3_BREATH            0
@@ -180,8 +175,9 @@ namespace dft_nefilm
     void PS_colorStore(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 halation : SV_Target0, out float4 diffusion : SV_Target1)
     {
         halation.rgb  = dot(tex2D(ReShade::BackBuffer, texcoord.xy).rgb, lumaCoeff);
-        halation.a = 1.0f;
-        diffusion = tex2D(ReShade::BackBuffer, texcoord.xy);
+        diffusion     = tex2D(ReShade::BackBuffer, texcoord.xy);
+        halation.a    = 1.0f;
+        diffusion.a   = 1.0f;
     }
 
     void PS_PreGrading(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 color : SV_Target0)
@@ -254,17 +250,23 @@ namespace dft_nefilm
     {
         float2 edgeUV;
 
-        edgeUV       = float2(halationEdgeWidth / ReShade::ScreenSize.x, halationEdgeWidth / ReShade::ScreenSize.y);
+        edgeUV       = float2(1.0 / ReShade::ScreenSize.x, 1.0 / ReShade::ScreenSize.y);
         halation.rgb = sobelFilter(halationBufferA, edgeUV.x, edgeUV.y, texcoord.xy, halationEdgeDetail, halationEdgeIntensity);
         halation.a   = 1.0f;
     }
+    
+    void PS_FilmFX_Halation2(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 halation : SV_Target0)
+    {
+        halation     = GaussianBlur1D(texcoord.xy, halationBufferB, float2(ReShade::PixelSize.x, 0.0) * halationBlurWidth * 0.5, halationBlurSigma, halationBlurSample);
+        halation.a   = 1.0f;
+    }
 
-    void PS_FilmFX_Halation2(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 color : SV_Target0)
+    void PS_FilmFX_Halation3(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 color : SV_Target0)
     {
         float4 halation;
 
         color        = tex2D(ReShade::BackBuffer, texcoord.xy);
-        halation     = fastGaussBlur(halationBufferB, texcoord.xy, halationBlurWidth, 4.0, 16.0);
+        halation     = GaussianBlur1D(texcoord.xy, halationBufferA, float2(0.0, ReShade::PixelSize.y) * halationBlurWidth * 0.5, halationBlurSigma, halationBlurSample);
         halation.rgb = (halation.rgb < 0.5 ? (2.0 * halation.rgb * halationTint) : (1.0 - 2.0 * (1.0 - halation.rgb) * (1.0 - halationTint))) * halationIntensity;
 
         switch(halationDebug)
@@ -287,43 +289,18 @@ namespace dft_nefilm
         float4 diffusion;
 
         color        = tex2D(ReShade::BackBuffer, texcoord.xy);
-        diffusion    = gaussBlur(texcoord.xy, diffusionBufferA, diffusionBlurWidth, 0, 1);
+        diffusion    = GaussianBlur1D(texcoord.xy, diffusionBufferA, float2(ReShade::PixelSize.x, 0.0) * diffusionBlurWidth * 0.5, diffusionBlurSigma, diffusionBlurSample);
         color.rgb    = diffusion.rgb;
         color.a      = 1.0f;
     }
-
-    #if(FILMFX_2_HQ_DIFFUSION)
-    void PS_FilmFX_DiffusionHQ1(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 color : SV_Target0)
-    {
-        float4 diffusion;
-        diffusion    = gaussBlur(texcoord.xy, diffusionBufferB, diffusionBlurWidth, 0, 0);
-        color.rgb    = diffusion.rgb;
-        color.a      = 1.0f;
-    }
-
-    void PS_FilmFX_DiffusionHQ2(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 color : SV_Target0)
-    {
-        float4 diffusion;
-        diffusion    = gaussBlur(texcoord.xy, diffusionBufferA, diffusionBlurWidthHQ, 0, 1);
-        color.rgb    = diffusion.rgb;
-        color.a      = 1.0f;
-    }
-    #endif
 
     void PS_FilmFX_Diffusion2(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 color : SV_Target0)
     {
-        float blur;
         float4 diffusion;
 
-        #if(FILMFX_3_HQ_DIFFUSION)
-        blur         = diffusionBlurWidthHQ;
-        #else
-        blur         = diffusionBlurWidth;
-        #endif
-
         color        = tex2D(ReShade::BackBuffer, texcoord.xy);
-        diffusion    = gaussBlur(texcoord.xy, diffusionBufferB, blur, 0, 0);
-
+        diffusion    = GaussianBlur1D(texcoord.xy, diffusionBufferB, float2(0.0, ReShade::PixelSize.y) * diffusionBlurWidth * 0.5, diffusionBlurSigma, diffusionBlurSample);
+        
         switch(diffusionBlendMode)
         {
           case 0: // Lighten
@@ -418,7 +395,7 @@ namespace dft_nefilm
     {
         color         = tex2D(ReShade::BackBuffer, texcoord);
         color         = fastBoxBlur(ReShade::BackBuffer, texcoord, lerp(0.0f, 0.5f, filmGrainBlur) * filmGrainSize / lerp(0.5, 2.0, filmGrainResolution));
-		}
+	}
     #endif
 }
 
@@ -458,6 +435,13 @@ namespace dft_nefilm
         {
             VertexShader   = PostProcessVS;
             PixelShader    = dft_nefilm::PS_FilmFX_Halation2;
+            RenderTarget0  = dft_nefilm::texHalationA;
+        }
+
+        pass filmFXHalation3
+        {
+            VertexShader   = PostProcessVS;
+            PixelShader    = dft_nefilm::PS_FilmFX_Halation3;
         }
         #endif
 
@@ -468,22 +452,6 @@ namespace dft_nefilm
             PixelShader    = dft_nefilm::PS_FilmFX_Diffusion1;
             RenderTarget0  = dft_nefilm::texDiffusionB;
         }
-
-        #if(FILMFX_2_HQ_DIFFUSION)
-        pass filmFXDiffusionHQ1
-        {
-            VertexShader   = PostProcessVS;
-            PixelShader    = dft_nefilm::PS_FilmFX_DiffusionHQ1;
-            RenderTarget0  = dft_nefilm::texDiffusionA;
-        }
-
-        pass filmFXDiffusionHQ2
-        {
-            VertexShader   = PostProcessVS;
-            PixelShader    = dft_nefilm::PS_FilmFX_DiffusionHQ2;
-            RenderTarget0  = dft_nefilm::texDiffusionB;
-        }
-        #endif
 
         pass filmFXDiffusion2
         {

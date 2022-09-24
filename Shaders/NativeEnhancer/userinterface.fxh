@@ -49,11 +49,7 @@
       "To activate those effects, go to preprocessor settings under NATIVENHANCER   \n"
       "user parameters. Scroll it down till you find \"Preprocessor Definitions\"   \n"
       "all of those effect will be listed there, change the value from 0 to 1 to    \n"
-      "activate the effect.                                                       \n\n"
-
-  		"Note for FilmFX : Diffusion -                                                \n"
-  		"Diffusion have high quality option, to use this you must enable              \n"
-      "FILMFX_2_HQ_DIFFUSION, and it's require FILMFX_2_DIFFUSION that enabled too. \n",
+      "activate the effect.                                                       \n\n",
       0)
 
 #undef KATEGORI
@@ -223,18 +219,11 @@
 
 #if(FILMFX_1_HALATION)
 #define KATEGORI  "Film FX : Halation"
-    MP_FLOAT_S(halationEdgeWidth,
-      "Halation Edge Width",
-      "Edge Bias Width.\n\n"
-      "Lower value  = Thinner edge\n"
-      "Higher value = Thicker edge line",
-      null, 0, 1.0, 5.0, 0.001, 1.000)
-
     MP_FLOAT_S(halationEdgeDetail,
-      "Halation Edge Detail",
-      "Edge Detail.\n\n"
+      "Halation Edge Curve",
+      "Edge Detail (Affected on Intensity).\n\n"
       "Lower value  = More pronounce detail\n"
-      "Higher value = Less detail",
+      "Higher value = Less pronounce detail",
       null, 0, 1.0, 5.0, 0.001, 2.000)
 
     MP_FLOAT_S(halationEdgeIntensity,
@@ -249,7 +238,7 @@
       "Halation blur width adjustment.\n\n"
       "Lower value  = Narrow blur effect\n"
       "Higher value = Wider blur effect",
-      null, 0, 1.0, 8.0, 0.001, 6.100)
+      null, 0, 1.0, 5.0, 0.001, 2.000)
 
     MP_FLOAT_S(halationOpacity,
       "Halation Opacity",
@@ -261,7 +250,7 @@
 
     MP_COLOR(halationTint,
       "Halation Color Tint",
-      null, null, 0, float3(0.784f, 0.567f, 0.046f))
+      null, null, 0, float3(0.941f, 0.597f, 0.042f))
     
     MP_COMBO(halationDebug,
       "Halation Debugging Mode",
@@ -280,15 +269,6 @@
       "Lower value  = Narrow blur effect\n"
       "Higher value = Wider blur effect",
       null, 0, 2.0, 16.0, 0.01, 4.0)
-
-    #if(FILMFX_2_HQ_DIFFUSION)
-    MP_FLOAT_S(diffusionBlurWidthHQ,
-      "Diffusion Blur Width - HQ",
-      "HQ Diffusion blur width adjustment.\n\n"
-      "Lower value  = Narrow blur effect\n"
-      "Higher value = Wider blur effect",
-      null, 0, 2.0, 16.0, 0.01, 4.0)
-    #endif
 
     MP_FLOAT_S(diffusionOpacity,
       "Diffusion Opacity",

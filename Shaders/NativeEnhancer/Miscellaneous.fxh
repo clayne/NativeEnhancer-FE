@@ -62,6 +62,20 @@
     #define PI                      3.14159265359
     #define DOUBLE_PI               2 * PI
 
+    #if(FILMFX_2_HQ_DIFFUSION)
+      #define diffusionBlurSample   28
+    #else
+      #define diffusionBlurSample   16
+    #endif    
+    #define diffusionBlurSigma      sqrt(float(diffusionBlurSample))
+
+   
+    #define halationBlurSample      12
+    #define halationBlurSigma       sqrt(float(halationBlurSample))
+
+    #define voglumetrikBlurSample   24
+    #define voglumetrikBlurSigma    sqrt(float(voglumetrikBlurSample))
+
     // Otis' Fit Fill Image
     #define aspekRasio              (float(BUFFER_WIDTH)/float(BUFFER_HEIGHT))
     #define wideRasio               1.77777777778 //Widescreen (16:9) Aspect Ratio
@@ -93,6 +107,12 @@
       randSeed     = framerate == 0 ? framecount : floor(timer * 0.001 * framerate);
       randSeed    %= 10000;
       return randSeed;
+    }
+
+    float smootherstep(float edge0, float edge1, float x)
+    {
+      x = saturate((x - edge0)/(edge1 - edge0)); 
+      return x*x*(3 - 2*x);
     }
 
     float gauss(float x, float e)
@@ -277,7 +297,41 @@
       color.rgb /= color.a;
       return color;
     }
+    // luluco250 https://www.shadertoy.com/view/ltBcDm
+    float Gaussian1D(float x, float sigma, bool UseSimplifiedGaussian)
+    {
+      if (UseSimplifiedGaussian)
+      {
+        return exp(-(x * x) / (2.0 * sigma * sigma));
+      }
 
+      float o = sigma * sigma;
+      float a = 1.0 / sqrt(2.0 * PI * o);
+      float b = (x * x) / (2.0 * o);
+
+      return a * exp(-b);
+    }
+
+    float4 GaussianBlur1D(float2 uv, sampler2D sp, float2 dir, float sigma, int samples)
+    {
+      float accum        = 0.0;
+      float halfSamples  = float(samples) * 0.5;
+      float4 color       = 0.0;
+       
+      uv -= halfSamples * dir;
+
+      for (int i = 0; i < samples; ++i)
+      {
+      float weight = Gaussian1D(float(i) - halfSamples, sigma, true);
+
+      color += tex2D(sp, uv) * weight;
+      accum += weight;
+
+      uv += dir;
+      }
+
+      return color / accum;
+    }
     //// SOBEL FILTER //////////////////////////////////////////////////////////
     float intensity(sampler2D tex, float2 coord, float2 xy_step)
     {
